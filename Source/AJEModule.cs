@@ -19,9 +19,9 @@ namespace AJE
 
         [KSPField(isPersistant = false, guiActive = false)]
         public bool useOverheat = true;
- //       [KSPField(isPersistant = false, guiActive = true)]
+        //       [KSPField(isPersistant = false, guiActive = true)]
         public float parttemp;
- //       [KSPField(isPersistant = false, guiActive = true)]
+        //       [KSPField(isPersistant = false, guiActive = true)]
         public float maxtemp;
 
 
@@ -85,7 +85,7 @@ namespace AJE
 
         [KSPField(isPersistant = false, guiActiveEditor = true)]
         public float Need_Area;
-  //      [KSPField(isPersistant = false, guiActive = true)]
+        //      [KSPField(isPersistant = false, guiActive = true)]
         public float fireflag;
 
         public float OverallThrottle = 0;
@@ -263,8 +263,8 @@ namespace AJE
 
             #endregion
 
-            aje.FARps0 = FlightGlobals.getStaticPressure(vessel.altitude,vessel.mainBody);
-            aje.FARts0 = FlightGlobals.getExternalTemperature((float)vessel.altitude,vessel.mainBody)+273.15f;
+            aje.FARps0 = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody);
+            aje.FARts0 = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
             if (usePrat3Curve)
             {
                 aje.prat[3] = aje.p3p2d = (double)(prat3Curve.Evaluate((float)aje.fsmach));
@@ -288,7 +288,7 @@ namespace AJE
                     aje.comPute();
                     engine.SetThrust(((float)aje.fnlb) * 0.004448f / ABthreshold);
                     engine.SetIsp((float)aje.isp);
-                    Mode = "Cruise " +System.Convert.ToString((int)(OverallThrottle / ABthreshold * 100f)) + "%";
+                    Mode = "Cruise " + System.Convert.ToString((int)(OverallThrottle / ABthreshold * 100f)) + "%";
                 }
                 else
                 {
@@ -297,16 +297,16 @@ namespace AJE
                     aje.tt7 = (OverallThrottle - ABthreshold) * (ABmax - ABmin) / (1 - ABthreshold) + ABmin;
 
                     aje.comPute();
-                    engine.SetThrust(((float)aje.fnlb) * 0.004448f/OverallThrottle);
+                    engine.SetThrust(((float)aje.fnlb) * 0.004448f / OverallThrottle);
                     engine.SetIsp((float)aje.isp);
-                    Mode = "Afterburner " +System.Convert.ToString((int)((OverallThrottle - ABthreshold) / (1 - ABthreshold) * 100f)) + "%";
+                    Mode = "Afterburner " + System.Convert.ToString((int)((OverallThrottle - ABthreshold) / (1 - ABthreshold) * 100f)) + "%";
                 }
-               
+
             }
+            Mode += " (" + (aje.fglb * 0.004448f).ToString("N2") + "kN gr)";
 
 
 
-            
 
             if (aje.fireflag > 0.9f && useOverheat)
             {
@@ -319,7 +319,7 @@ namespace AJE
             maxtemp = part.maxTemp;
 
 
- //           mach = (float)aje.fsmach;
+            //           mach = (float)aje.fsmach;
 
 
         }
@@ -329,6 +329,6 @@ namespace AJE
 
 
 
-  
+
 
 }
