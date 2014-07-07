@@ -31,7 +31,7 @@ namespace AJE
         public double a2min, a2max, a8min, a8max, t7min, t7max, diamin, diamax;
         public double bypmin, bypmax, fprmin, fprmax;
         public double vmn1, vmn2, vmn3, vmn4, vmx1, vmx2, vmx3, vmx4;
-        public double lconv1, lconv2, fconv, pconv, tconv, tref, mconv1, mconv2, econv, econv2;
+        public double FT2M, MPH2KPH, LBF2Newtons, PSI2kPa, F2C, tref, Lb2kg, Slug2kg, BTU2Joules, BTU2kJ;
         public double aconv, bconv, dconv, flconv;
         // weight and materials
         public double weight, wtref, wfref;
@@ -127,11 +127,11 @@ namespace AJE
             inptype = 0;
             siztype = 0;
             lunits = 0;
-            lconv1 = 1.0; lconv2 = 1.0; fconv = 1.0; mconv1 = 1.0;
-            pconv = 1.0; econv = 1.0; aconv = 1.0; bconv = 1.0;
-            mconv2 = 1.0; dconv = 1.0; flconv = 1.0; econv2 = 1.0;
-            tconv = 1.0; tref = 459.6;
-            g0 = g0d = 32.2;
+            FT2M = 1.0; MPH2KPH = 1.0; LBF2Newtons = 1.0; Lb2kg = 1.0;
+            PSI2kPa = 1.0; BTU2Joules = 1.0; aconv = 1.0; bconv = 1.0;
+            Slug2kg = 1.0; dconv = 1.0; flconv = 1.0; BTU2kJ = 1.0;
+            F2C = 1.0; tref = 459.6;
+            g0 = g0d = 32.1740;
 
             counter = 0;
             showcom = 0;
@@ -223,10 +223,10 @@ namespace AJE
 
 
 
-            lconv1 = .3048; lconv2 = 1.609; fconv = 4.448;
-            econv = 1055f; econv2 = 1.055;
-            mconv1 = .4536; pconv = 6.891; tconv = 0.555555;
-            mconv2 = 14.59; tref = 273.1;
+            FT2M = .3048; MPH2KPH = 1.60934; LBF2Newtons = 4.44822162;
+            BTU2Joules = 1055f; BTU2kJ = 1.055;
+            Lb2kg = .453592; PSI2kPa = 6.89475729; F2C = 0.555555;
+            Slug2kg = 14.5939029; tref = 273.15;
             return;
         }
 
@@ -237,8 +237,8 @@ namespace AJE
             absav = abflag;
             flsav = fueltype;
             fhsav = fhvd / flconv;
-            t4sav = tt4d / tconv;
-            t7sav = tt7d / tconv;
+            t4sav = tt4d / F2C;
+            t7sav = tt7d / F2C;
             p3sav = p3p2d;
             p3fsav = p3fp2d;
             bysav = byprat;
@@ -261,8 +261,8 @@ namespace AJE
             a8mxsav = a8max / aconv;
             a8rtsav = a8rat;
 
-            u0mxsav = u0max / lconv2;
-            u0sav = u0d / lconv2;
+            u0mxsav = u0max / MPH2KPH;
+            u0sav = u0d / MPH2KPH;
             arssav = arsched;
 
             wtfsav = wtflag; wtsav = weight;
@@ -597,14 +597,14 @@ namespace AJE
 
             if (inptype == 0 || inptype == 2)
             {           /*						 input speed  */
-                u0 = u0d / lconv2 * 5280f / 3600f;           /*								 airspeed ft/sec */
+                u0 = u0d / MPH2KPH * 5280f / 3600f;           /*								 airspeed ft/sec */
                 fsmach = u0 / a0;
                 q0 = gama / 2.0 * fsmach * fsmach * ps0;
             }
             if (inptype == 1 || inptype == 3)
             {            /*						 input mach */
                 u0 = fsmach * a0;
-                u0d = u0 * lconv2 / 5280f * 3600f;      /*								 airspeed ft/sec */
+                u0d = u0 * MPH2KPH / 5280f * 3600f;      /*								 airspeed ft/sec */
                 q0 = gama / 2.0 * fsmach * fsmach * ps0;
             }
             if (u0 > .0001) rho0 = q0 / (u0 * u0);
@@ -994,7 +994,7 @@ namespace AJE
             rg1 = 53.3;
             rg = cpair * (gama - 1.0) / gama;
             cp3 = getCp(tt[3], gamopt);                  /*						BTU/lbm R */
-            g0 = 32.2;
+            g0 = 32.1740;
             ues = 0.0;
             game = getGama(tt[5], gamopt);
             fac1 = (game - 1.0) / game;
