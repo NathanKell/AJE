@@ -19,13 +19,13 @@ namespace AJE
         public float idle = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float r0;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "v0", guiFormat = "000"), UI_FloatRange(minValue = 300f, maxValue = 1600f, stepIncrement = 5f)]
         public float v0;
         [KSPField(isPersistant = false, guiActive = false)]
         public float omega0;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "rho0", guiFormat = "0.###"), UI_FloatRange(minValue = 0.26f, maxValue = 1.26f, stepIncrement = 0.005f)]
         public float rho0;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "power0", guiFormat = "000"), UI_FloatRange(minValue = 300.00f, maxValue = 4000.0f, stepIncrement = 10f)]
         public float power0;
         [KSPField(isPersistant = false, guiActive = false)]
         public float fine;
@@ -40,19 +40,65 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float turbo = 1f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float BSFC;
+        public float BSFC = 7.62e-08f;
         [KSPField(isPersistant = false, guiActive = true)]
         public string ShaftPower;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float SpeedBuff = 1.3f;
+        public float SpeedBuff = 1.0f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxThrust = 99999;
 
-        public float density;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float wastegateMP = 29.921f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float compression = 7f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float displacement = -1f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float boost0 = -1f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float rated0 = -1f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float boost1 = -1f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float rated1 = -1f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float cost1 = 0f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float switchAlt = 180f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float exhaustThrust = 0f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float coolerEffic = 0f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float coolerMin = -200f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float ramAir = 0.2f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Manifold Pressure (inHG)")]
+        public float manifoldPressure = 0.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Fuel Flow (kg/s)")]
+        public float fuelFlow = 0.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Charge Air Temp")]
+        public float chargeAirTemp = 15.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust (kN)")]
+        public float netExhaustThrust = 0.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
+        public float boost = 1.0f;
+        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
+        public float mixture = 0.836481f; // optimal "auto rich"
+        // ignore RPM for now
+
 //        [KSPField(isPersistant = false, guiActive = true)]
-        public float pressure;
+        public float density = 1.225f;
 //        [KSPField(isPersistant = false, guiActive = true)]
-        public float temperature;
+        public float pressure = 101325f;
+//        [KSPField(isPersistant = false, guiActive = true)]
+        public float temperature = 15f;
 //        [KSPField(isPersistant = false, guiActive = true)]
         public float v;
 //        [KSPField(isPersistant = false, guiActive = true)]
@@ -63,6 +109,8 @@ namespace AJE
         public float thrust;
  //       [KSPField(isPersistant = false, guiActive = true)]
         public float isp;
+
+        public const float INHG2PA = 101325.0f / 760f * 1000f * 0.0254f; // 1 inch of Mercury in Pascals
 
 
  //       [KSPField(isPersistant = false, guiActive = true)]
@@ -93,11 +141,20 @@ namespace AJE
      //       omega *= 0.1047f;
      //       power *= 745.7f;
 
-            propeller = new AJEPropellerSolver(r0, v0 * 0.5144f, omega0 * 0.1047f, rho0, power0 * 745.7f);
-            pistonengine = new PistonEngine(power * 745.7f, omega * 0.1047f / gearratio);
+            propeller = new AJEPropellerSolver(r0, v0 * 0.5144f, omega0 * PistonEngine.RPM2RADPS, rho0, power0 * PistonEngine.HP2W);
+            pistonengine = new PistonEngine(power * PistonEngine.HP2W, omega * PistonEngine.RPM2RADPS / gearratio, BSFC);
             pistonengine._hasSuper = true;
-            pistonengine.setTurboParams(turbo, 101300f);
-            pistonengine._mixture = 1f;
+            if (!pistonengine.setBoostParams(wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt))
+                pistonengine.setTurboParams(turbo, wastegateMP * INHG2PA);
+            if (displacement > 0)
+                pistonengine._displacement = displacement * PistonEngine.CIN2CM;
+            pistonengine._compression = compression;
+            pistonengine._coolerEffic = coolerEffic;
+            pistonengine._coolerMin = coolerMin + 273.15f;
+            pistonengine._ramAir = ramAir;
+
+            pistonengine.ComputeVEMultiplier(); // given newly-set stats
+
             propeller.setStops(fine, coarse);
             
         }
@@ -115,25 +172,31 @@ namespace AJE
                 engine.SetThrust(0);
                 return;
             }
+            // for RPM handling - bool throttleCut = (object)vessel != null && vessel.ctrlState.mainThrottle <= 0;
+            pistonengine._boost = boost;
+            pistonengine._mixture = mixture;
 
             density = (float)ferram4.FARAeroUtil.GetCurrentDensity(part.vessel.mainBody, (float)part.vessel.altitude);
             v = Vector3.Dot(vessel.srf_velocity,-part.FindModelTransform(engine.thrustVectorTransformName).forward.normalized);
-            pressure = (float)FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101300f;
+            pressure = (float)FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f + 0.5f * density * v * v * ramAir; // include dynamic pressure
             temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
 
-            propeller.calc(density, v / SpeedBuff, omega * 0.1047f);
+            propeller.calc(density, v / SpeedBuff, omega * PistonEngine.RPM2RADPS);
 
 
 
-            pistonengine.calc(pressure, temperature, omega * 0.1047f / gearratio);
+            pistonengine.calc(pressure, temperature, omega * PistonEngine.RPM2RADPS / gearratio);
             
             if (!useOxygen)
             {
-                pistonengine._power = power * 745.7f;
-                pistonengine._torque = power * 745.7f / (omega * 0.1047f);
+                pistonengine._power = power * PistonEngine.HP2W;
+                pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
             }
 
-            ShaftPower = ((int)(pistonengine._power/745.7)).ToString()+"HP";
+            ShaftPower = ((int)Math.Round(pistonengine._power/PistonEngine.HP2W)).ToString()+"HP";
+            manifoldPressure = pistonengine._mp / INHG2PA;
+            fuelFlow = pistonengine._fuelFlow;
+            chargeAirTemp = pistonengine._chargeTemp - 273.15f;
 
             float mod = 1;
             targetTorque = pistonengine._torque/gearratio;
@@ -148,8 +211,11 @@ namespace AJE
             propeller.modPitch(mod);
 
             thrust = propeller._thrustOut / 1000f;
+            // exhaust thrust, normalized for 2200HP and 180m/s = 200lbs thrust
+            netExhaustThrust = exhaustThrust * pistonengine._power / 2200f / 745.7f * 0.89f * (0.5f + v / 360f);
+            thrust += netExhaustThrust;
             engine.SetThrust(thrust);
-            isp = propeller._thrustOut / 9.801f / BSFC / pistonengine._power;
+            isp = propeller._thrustOut / 9.80665f / BSFC / pistonengine._power;
             engine.SetIsp(isp);
             
 //            Vector3d v1 = part.FindModelTransform("thrustTransform").forward;
@@ -170,16 +236,13 @@ namespace AJE
         public float _throttle = 1f;
         public bool _starter = false; // true=engaged, false=disengaged
         public int _magnetos = 0; // 0=off, 1=right, 2=left, 3=both
-        public float _mixture = 1;
+        public float _mixture = 0.836481f; //optimal
         public float _boost;
         public bool _fuel;
         public bool _running = true;
         public float _power0;   // reference power setting
         public float _omega0;   //   "       engine speed
-        public float _rho0;     //   "       manifold air density
-        public float _f0;       // "ideal" fuel flow at P0/omega0
         public float _mixCoeff; // fuel flow per omega at full mixture
-        public float _turbo;    // (or super-)charger pressure multiplier
         public bool _hasSuper;  // true indicates gear-driven (not turbo)
         public float _turboLag; // turbo lag time in seconds
         public float _charge;   // current {turbo|super}charge multiplier
@@ -189,6 +252,15 @@ namespace AJE
         public float _displacement; // piston stroke volume
         public float _compression;  // compression ratio (>1)
         public float _minthrottle; // minimum throttle [0:1]
+        public float _voleffic; // volumetric efficiency
+        public float[] _boostMults;
+        public float[] _boostCosts;
+        public int _boostMode;
+        public float _boostSwitch;
+        public float _bsfc;
+        public float _coolerEffic;
+        public float _coolerMin;
+        public float _ramAir;
 
         // Runtime state/output:
         public float _mp;
@@ -200,69 +272,191 @@ namespace AJE
         public float _oilTempTarget;
         public float _dOilTempdt;
         public float _power;
+        public float _chargeTemp;
 
-        const float HP2W = 745.7f;
-        const float CIN2CM = 1.6387064e-5f;
-        const float RPM2RADPS = 0.1047198f;
+        public const float HP2W = 745.7f;
+        public const float CIN2CM = 1.6387064e-5f;
+        public const float RPM2RADPS = 0.1047198f;
+        public const float RAIR = 287.3f;
+        public FloatCurve mixtureEfficiency; //fuel:air -> efficiency
 
-        public PistonEngine(float power, float speed)
+        const float T0 = 288.15f;
+        const float P0 = 101325f;
+
+        public PistonEngine(float power, float speed, float BSFC)
         {
             _boost = 1;
             _running = false;
             _fuel = true;
             _boostPressure = 0;
             _hasSuper = false;
+            _boostMults = new float[2];
+            _boostCosts = new float[2];
+            _boostMults[0] = 1f;
+            _boostMults[1] = 1f;
+            _boostCosts[0] = 0f;
+            _boostCosts[1] = 0f;
+            _boostMode = 0;
+            _boostSwitch = -1f; // auto
+            _coolerEffic = 0f;
+            _coolerMin = 0f;
+            _ramAir = 0.2f;
 
             _oilTemp = 298f;
             _oilTempTarget = _oilTemp;
             _dOilTempdt = 0;
 
-            // Presume a BSFC (in lb/hour per HP) of 0.45.  In SI that becomes
-            // (2.2 lb/kg, 745.7 W/hp, 3600 sec/hour) 7.62e-08 kg/Ws.
-            _f0 = power * 7.62e-08f;
+            _bsfc = BSFC;
 
-            _power0 = power;
-            _omega0 = speed;
-
-            // We must be at sea level under standard conditions
-            _rho0 = 1.27f;
-
-            // Further presume that takeoff is (duh) full throttle and
-            // peak-power, that means that by our efficiency function, we are
-            // at 11/8 of "ideal" fuel flow.
-            float realFlow = _f0 * (11.0f / 8.0f);
-            _mixCoeff = realFlow * 1.1f / _omega0;
-
-            _turbo = 1;
             _minthrottle = 0.1f;
             _maxMP = 1e6f; // No waste gate on non-turbo engines.
-            _wastegate = 1;
-            _charge = 1;
-            _chargeTarget = 1;
-            _turboLag = 2;
+            _wastegate = 1f;
+            _charge = 1f;
+            _chargeTarget = 1f;
+            _turboLag = 2f;
+
+            // set reference conditions
+            _power0 = power;
+            _omega0 = speed;
 
             // Guess at reasonable values for these guys.  Displacements run
             // at about 2 cubic inches per horsepower or so, at least for
             // non-turbocharged engines.
+            // change to 1.4; supercharging...
             _compression = 8;
-            _displacement = power * (2 * CIN2CM / HP2W);
+            _displacement = power * (1.4f * CIN2CM / HP2W);
+
+            mixtureEfficiency = new FloatCurve();
+            ConfigNode node = new ConfigNode("MixtureEfficiency");
+            node.AddValue("key", "0.05	0.0");
+            node.AddValue("key", "0.05137	0.00862");
+            node.AddValue("key", "0.05179	0.21552");
+            node.AddValue("key", "0.0543	0.48276");
+            node.AddValue("key", "0.05842	0.7069");
+            node.AddValue("key", "0.06312	0.83621");
+            node.AddValue("key", "0.06942	0.93103");
+            node.AddValue("key", "0.07786	1.0");
+            node.AddValue("key", "0.08845	1.0");
+            node.AddValue("key", "0.0927	0.98276");
+            node.AddValue("key", "0.1012	0.93103");
+            node.AddValue("key", "0.11455	0.72414");
+            node.AddValue("key", "0.12158	0.4569");
+            node.AddValue("key", "0.12435	0.23276");
+            node.AddValue("key", "0.125 0.0");
+            mixtureEfficiency.Load(node);
+
+
+            ComputeVEMultiplier(); // compute volumetric efficiency of engine, based on rated power and BSFC.
         }
+
+        // return the fuel:air ratio of the given mixture setting.
+        // mix = range [0, 1]
+        public float FuelAirRatio(float mix) 
+        {
+            return 1f / (8.05f + 11.2f * (1f - mix)); // prevent an AFR too high or low
+        }
+
+        // return the relative volumetric efficiency of the engine, given its compression ratio
+        // at the ambient pressure pAmb and the manifold absolute pressure MAP
+        public float GetPressureVE(float pAmb, float MAP)
+        {
+            // JSBSim
+            float gamma = 1.4f;
+            return ((gamma - 1f) / gamma) + (_compression - (pAmb / MAP)) / (gamma * (_compression - 1f));
+        }
+
+        // return the charge air temperature after heating and cooling (if any)
+        // at given manifold absolute pressure MAP, and given ambient pressure and temp
+        // Very simple model: the aftercooler will cool the charge to (cooling efficiency) of
+        //  ambient temperature, to a minimum temperature of (cooler min)
+        public float GetCAT(float MAP, float pAmb, float tAmb)
+        {
+            // Air entering the manifold does so rapidly, and thus the
+            // pressure change can be assumed to be adiabatic.  Calculate a
+            // temperature change, and then apply aftercooling/intercooling (if any)
+            float T = tAmb * Mathf.Pow((MAP * MAP) / (pAmb * pAmb), 1f / 7f);
+            return Math.Max(_coolerMin, T - (T - tAmb) * _coolerEffic);
+        }
+
+        // return the mass airflow through the engine
+        // running at given speed in radians/sec, given manifold absolute pressure MAP,
+        // given ambient pressure and temperature. Depends on displacement and
+        // the volumetric efficiency multiplier.
+        public float GetAirflow(float pAmb, float tAmb, float speed, float MAP)
+        {
+            //from JSBSim
+            // air flow
+            float swept_volume = (_displacement * speed / RPM2RADPS / 60f) / 2f;
+            float v_dot_air = swept_volume * GetPressureVE(pAmb, MAP) * _voleffic;
+
+            float rho_air_manifold = MAP / (RAIR * GetCAT(MAP, pAmb, tAmb));
+            return v_dot_air * rho_air_manifold;
+        }
+
+        // will compute the volumetric efficiency multiplier for the engine
+        // given all reference engine stats.
+        public void ComputeVEMultiplier()
+        {
+            _voleffic = 1f; // reset the volumetric efficiency multiplier
+
+            // The idea: since HP will be proportional to fuel flow (* mixture efficiency)
+            // we compute the multiplier to airflow needed to yield the desired HP.
+            // Assume boost0 at takeoff, up to max MP. We use optimal mixture for power.
+            float fuelAirRatio = FuelAirRatio(0.836481f);
+            float MAP = Math.Min(_maxMP, P0 * _boostMults[0]);
+            float m_dot_air = GetAirflow(P0, T0, _omega0, MAP);
+            float m_dot_fuel = fuelAirRatio * m_dot_air;
+            float power = m_dot_fuel * mixtureEfficiency.Evaluate(fuelAirRatio) / _bsfc;
+            _voleffic = _power0 / power;
+            float m_dot_air2 = GetAirflow(P0, T0, _omega0, MAP);
+            float m_dot_fuel2 = fuelAirRatio * m_dot_air;
+            power = m_dot_fuel2 * mixtureEfficiency.Evaluate(fuelAirRatio) / _bsfc;
+            MonoBehaviour.print("*AJE* Setting volumetric efficiency. At SL with MAP " + MAP + ", power = " + power / HP2W + "HP, BSFC = " + _bsfc + ", mda/f = " + m_dot_air2 + "/" + m_dot_fuel2 + ", VE = " + _voleffic + ". Orig a/f: " + m_dot_air + "/" + m_dot_fuel);
+        }
+        
+        // legacy support
         public void setTurboParams(float turbo, float maxMP)
         {
-            _turbo = turbo;
             _maxMP = maxMP;
-
-            // This changes the "sea level" manifold air density
-            float P0 = 101000;
-            float P = P0 * (1 + _boost * (_turbo - 1));
-            if (P > _maxMP) P = _maxMP;
-            float T = 298f * Mathf.Pow(P / P0, 2f / 7f);
-            _rho0 = P / (287.1f * T);
+            _boostMults[0] = turbo;
+            _boostCosts[0] = 0f;
         }
-        public void calc(float pressure, float temp, float speed)
-        {
-            _running = true; //_magnetos && _fuel && (speed > 60*RPM2RADPS);
 
+        // set boost parameters:
+        // maximum MAP, the two boost pressures to maintain, the two rated altitudes (km),
+        // the cost for the second boost mode, and the switch altitude (in km), or -1f for auto
+        public bool setBoostParams(float wastegate, float boost0, float boost1, float rated0, float rated1, float cost1, float switchAlt)
+        {
+            bool retVal = false;
+            if (boost0 > 0)
+            {
+                _boostMults[0] = boost0 / ((float)FlightGlobals.getStaticPressure(rated0, FlightGlobals.Bodies[1]) * 101325f);
+                _maxMP = wastegate;
+                retVal = true;
+            }
+            if (boost1 > 0)
+            {
+                _boostMults[1] = boost1 / ((float)FlightGlobals.getStaticPressure(rated1, FlightGlobals.Bodies[1]) * 101325f);
+                _boostCosts[1] = cost1;
+            }
+            else
+            {
+                _boostMults[1] = 0f;
+                _boostCosts[1] = 0f;
+            }
+            if (switchAlt >= 0f)
+                _boostSwitch = (float)FlightGlobals.getStaticPressure(switchAlt, FlightGlobals.Bodies[1]) * 101325f;
+            else
+                _boostSwitch = switchAlt;
+            MonoBehaviour.print("*AJE* Setting boost params. MaxMP = " + wastegate + ", boosts = " + _boostMults[0] + "/" + _boostMults[1] + ", switch " + _boostSwitch + " from " + boost0 + "@" + rated0 + ", " + boost1 + "@" + rated1);
+
+            return retVal;
+        }
+
+        // Gets the target for the [turbo]supercharger
+        // takes engine speed, boost mode
+        float GetChargeTarget(float speed, int boostMode)
+        {
             // Calculate the factor required to modify supercharger output for
             // rpm. Assume that the normalized supercharger output ~= 1 when
             // the engine is at the nominal peak-power rpm.  A power equation
@@ -275,79 +469,100 @@ namespace AJE
             float B = 0.55620178f;
             float C = 1.246708471f;
             float rpm_factor = A * Mathf.Pow(B, rpm_norm) * Mathf.Pow(rpm_norm, C);
-            _chargeTarget = 1 + (_boost * (_turbo - 1) * rpm_factor);
+            return 1f + (_boost * (_boostMults[boostMode] - 1f) * rpm_factor);
+        }
 
-            if (_hasSuper)
-            {
-                // Superchargers have no lag
-                _charge = _chargeTarget;
-            } //else if(!_running) {
-            // Turbochargers only work well when the engine is actually
-            // running.  The 25% number is a guesstimate from Vivian.
-            //   _chargeTarget = 1 + (_chargeTarget - 1) * 0.25;
-            //  }
-
+        // return the manifold absolute pressure in pascals
+        // takes the ambient pressure and the boost mode
+        // clamps to [ambient pressure.....wastegate]
+        public float CalcMAP(float pAmb, int boostMode, float charge)
+        {
             // We need to adjust the minimum manifold pressure to get a
             // reasonable idle speed (a "closed" throttle doesn't suck a total
             // vacuum in real manifolds).  This is a hack.
-            float _minMP = (-0.008f * _turbo) + _minthrottle;
+            float _minMP = (-0.008f * _boostMults[boostMode]) + _minthrottle;
 
-            _mp = pressure * _charge;
+            float MAP = pAmb * charge;
 
             // Scale to throttle setting, clamp to wastegate
             if (_running)
-                _mp *= _minMP + (1 - _minMP) * _throttle;
+                MAP *= _minMP + (1 - _minMP) * _throttle;
 
             // Scale the max MP according to the WASTEGATE control input.  Use
             // the un-supercharged MP as the bottom limit.
-            float max = _wastegate * _maxMP;
-            if (max < _mp / _charge) max = _mp / _charge;
-            if (_mp > max) _mp = max;
+            return (float)Math.Min(MAP, Math.Max(_wastegate * _maxMP, pAmb));
+        }
 
+        // Iteration method
+        // Will calculate engine parameters.
+        // Takes ambient pressure, temperature, and the engine revolutions in radians/sec
+        public void calc(float pAmb, float tAmb, float speed)
+        {
+            _running = true; //_magnetos && _fuel && (speed > 60*RPM2RADPS);
+
+            // check if we need to switch boost modes
+            float power;
+            float MAP;
+            float fuelRatio = FuelAirRatio(_mixture);
+            if (_boostSwitch > 0)
+            {
+                if (pAmb < _boostSwitch - 1000 && _boostMode < 1)
+                    _boostMode++;
+                if (pAmb > _boostSwitch + 1000 && _boostMode > 0)
+                    _boostMode--;
+
+                _chargeTarget = GetChargeTarget(speed, _boostMode);
+                if (_hasSuper)
+                {
+                    // Superchargers have no lag
+                    _charge = _chargeTarget;
+                } //else if(!_running) {
+                // Turbochargers only work well when the engine is actually
+                // running.  The 25% number is a guesstimate from Vivian.
+                //   _chargeTarget = 1 + (_chargeTarget - 1) * 0.25;
+                //  }
+
+                MAP = CalcMAP(pAmb, _boostMode, _charge);
+
+                // Compute fuel flow
+                _fuelFlow = GetAirflow(pAmb, tAmb, speed, MAP) * fuelRatio;
+                power = _fuelFlow * mixtureEfficiency.Evaluate(fuelRatio) / _bsfc - _boostCosts[_boostMode];
+            }
+            else // auto switch
+            {
+                // assume supercharger for now, so charge = target
+                float target0 = GetChargeTarget(speed, 0);
+                float target1 = GetChargeTarget(speed, 1);
+                float MAP0 = CalcMAP(pAmb, 0, target0);
+                float MAP1 = CalcMAP(pAmb, 1, target1);
+
+                float m_dot_fuel0 = GetAirflow(pAmb, tAmb, speed, MAP0) * fuelRatio;
+                float power0 = m_dot_fuel0 * mixtureEfficiency.Evaluate(fuelRatio) / _bsfc - _boostCosts[0];
+
+                float m_dot_fuel1 = GetAirflow(pAmb, tAmb, speed, MAP1) * fuelRatio;
+                float power1 = m_dot_fuel1 * mixtureEfficiency.Evaluate(fuelRatio) / _bsfc - _boostCosts[1];
+
+                if (power0 >= power1)
+                {
+                    MAP = MAP0;
+                    _chargeTarget = _charge = target0;
+                    power = power0;
+                    _fuelFlow = m_dot_fuel0;
+                }
+                else
+                {
+                    MAP = MAP1;
+                    _chargeTarget = _charge = target1;
+                    power = power1;
+                    _fuelFlow = m_dot_fuel0;
+                }
+            }
+
+            _mp = MAP;
+            _chargeTemp = GetCAT(MAP, pAmb, tAmb); // duplication of effort, but oh well
 
             // The "boost" is the delta above ambient
-            _boostPressure = _mp - pressure;
-
-            // Air entering the manifold does so rapidly, and thus the
-            // pressure change can be assumed to be adiabatic.  Calculate a
-            // temperature change, and use that to get the density.
-            // Note: need to model intercoolers here...
-            float T = temp * Mathf.Pow((_mp * _mp) / (pressure * pressure), 1f / 7f);
-            float rho = _mp / (287.1f * T);
-
-            // The actual fuel flow is determined only by engine RPM and the
-            // mixture setting.  Not all of this will burn with the same
-            // efficiency.
-            _fuelFlow = _mixture * speed * _mixCoeff;
-            if (_fuel == false) _fuelFlow = 0;
-
-            // How much fuel could be burned with ideal (i.e. uncorrected!)
-            // combustion.
-            float burnable = _f0 * (rho / _rho0) * (speed / _omega0);
-
-            // Calculate the fuel that actually burns to produce work.  The
-            // idea is that less than 5/8 of ideal, we get complete
-            // combustion.  We use up all the oxygen at 1 3/8 of ideal (that
-            // is, you need to waste fuel to use all your O2).  In between,
-            // interpolate.  This vaguely matches a curve I copied out of a
-            // book for a single engine.  Shrug.
-            float burned;
-            float r = _fuelFlow / burnable;
-            if (burnable == 0) burned = 0;
-            else if (r < .625) burned = _fuelFlow;
-            else if (r > 1.375) burned = burnable;
-            else
-                burned = _fuelFlow + (burnable - _fuelFlow) * (r - 0.625f) * (4.0f / 3.0f);
-
-            // Correct for engine control state
-            if (!_running)
-                burned = 0;
-            if (_magnetos < 3)
-                burned *= 0.9f;
-
-            // And finally the power is just the reference power scaled by the
-            // amount of fuel burned, and torque is that divided by RPM.
-            float power = _power0 * burned / _f0;
+            _boostPressure = _mp - pAmb;
 
             _power = power;
             _torque = power / speed;
@@ -373,6 +588,9 @@ namespace AJE
                 _torque -= 0.08f * (_power0 / _omega0) * interp;
             }
 
+
+            // UNUSED
+            /*
             // Now EGT.  This one gets a little goofy.  We can calculate the
             // work done by an isentropically expanding exhaust gas as the
             // mass of the gas times the specific heat times the change in
@@ -417,6 +635,7 @@ namespace AJE
                 tau = 1500;
             }
             _dOilTempdt = (_oilTempTarget - _oilTemp) / tau;
+             */
         }
 
     }
