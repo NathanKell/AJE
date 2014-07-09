@@ -16,7 +16,7 @@ namespace AJE
         public int numeng, gamopt, arsched, plttyp, showcom;
         public int athsched, aexsched, fueltype, inptype, siztype;
         // Flow variables
-        public double g0d, g0, rgas, gama, cpair;
+        public double g0d, g0, rgas, gamma, cpair;
         public double tt4, tt4d, tt7, tt7d, t8, p3p2d, p3fp2d, byprat, throtl;
         public double fsmach = 0, alt, ts0, ps0, q0, u0d, u0, a0, rho0, tsout, psout;
         public double epr, etr, npr, snpr, fnet, fgros, dram, sfc, fa, eair, uexit, ues;
@@ -139,7 +139,7 @@ namespace AJE
             pt2flag = 0;
             wtflag = 0;
             fireflag = 0;
-            gama = 1.4;
+            gamma = 1.4;
             gamopt = 1;
             u0d = 0.0;
             throtl = 100f;
@@ -245,7 +245,7 @@ namespace AJE
             a4 = .290;
             a4p = 1.131;
             acap = .9 * a2;
-            gama = 1.4;
+            gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
             eta[2] = 1.0;
@@ -295,7 +295,7 @@ namespace AJE
             a4 = .323;
             a4p = .818;
             acap = .9 * a2;
-            gama = 1.4;
+            gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
             eta[2] = 1.0;
@@ -345,7 +345,7 @@ namespace AJE
             a4 = .472;
             a4p = 1.524;
             acap = .9 * a2;
-            gama = 1.4;
+            gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
             eta[2] = 1.0;
@@ -400,7 +400,7 @@ namespace AJE
             a4 = .323;
             a4p = .818;
             acap = .9 * a2;
-            gama = 1.4;
+            gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
             eta[2] = 1.0;
@@ -471,7 +471,7 @@ namespace AJE
             ps0 = FARps0 * 14.696 * 146;
 
 
-            a0 = Math.Sqrt(gama * rgas * ts0);             /*						 speed of sound ft/sec */
+            a0 = Math.Sqrt(gamma * rgas * ts0);             /*						 speed of sound ft/sec */
 
 
 
@@ -479,22 +479,22 @@ namespace AJE
             {           /*						 input speed  */
                 u0 = u0d / MPH2KPH * 5280f / 3600f;           /*								 airspeed ft/sec */
                 fsmach = u0 / a0;
-                q0 = gama / 2.0 * fsmach * fsmach * ps0;
+                q0 = gamma / 2.0 * fsmach * fsmach * ps0;
             }
             if (inptype == 1 || inptype == 3)
             {            /*						 input mach */
                 u0 = fsmach * a0;
                 u0d = u0 * MPH2KPH / 5280f * 3600f;      /*								 airspeed ft/sec */
-                q0 = gama / 2.0 * fsmach * fsmach * ps0;
+                q0 = gamma / 2.0 * fsmach * fsmach * ps0;
             }
             if (u0 > .0001) rho0 = q0 / (u0 * u0);
             else rho0 = 1.0;
 
-            tt[0] = ts0 * (1.0 + .5 * (gama - 1.0) * fsmach * fsmach);
+            tt[0] = ts0 * (1.0 + .5 * (gamma - 1.0) * fsmach * fsmach);
 
 
 
-            pt[0] = ps0 * Math.Pow(tt[0] / ts0, gama / (gama - 1.0));
+            pt[0] = ps0 * Math.Pow(tt[0] / ts0, gamma / (gamma - 1.0));
             ps0 = ps0 / 144f;
             pt[0] = pt[0] / 144f;
             cpair = getCp(tt[0], gamopt);              /*						BTU/lbm R */
@@ -508,30 +508,17 @@ namespace AJE
 
         public void getThermo()
         {
-            double dela, t5t4n, deriv, delan, m5;
+            double m5;
             double delhc, delhht, delhf, delhlt;
             double deltc, deltht, deltf, deltlt;
-            int itcount, index;
-            /*						   inlet recovery  */
-            if (pt2flag != 0) //was ==0 in original code
-            {                    /*						     mil spec      */
-                if (fsmach > 1.0)
-                {          /*								 supersonic */
-                    prat[2] = 1.0 - .075 * Math.Pow(fsmach - 1.0, 1.35);
-                }
-                else
-                {
-                    prat[2] = 1.0;
-                }
-                eta[2] = prat[2];
-            }
-            else
-            {                       /*						 enter value */
-                prat[2] = eta[2];
-            }
+            
+            prat[2] = eta[2]; // assume the inlet already took care of this
+            // so just use the entered value.
+
             /*						 protection for overwriting input */
-            if (eta[3] < .5) eta[3] = .5;
-            if (eta[5] < .5) eta[5] = .5;
+            // don't clamp values.
+            /*if (eta[3] < .5) eta[3] = .5;
+            if (eta[5] < .5) eta[5] = .5;*/
             trat[7] = 1.0;
             prat[7] = 1.0;
             tt[2] = tt[1] = tt[0];
@@ -539,7 +526,7 @@ namespace AJE
 
 
             pt[1] = pt[0];
-            gam[2] = getGama(tt[2], gamopt);
+            gam[2] = getGamma(tt[2], gamopt);
             cp[2] = getCp(tt[2], gamopt);
             pt[2] = pt[1] * prat[2];
             /*						 design - p3p2 specified - tt4 specified */
@@ -553,17 +540,17 @@ namespace AJE
                 pt[3] = pt[2] * prat[3];
                 tt[3] = tt[2] + deltc;
                 trat[3] = tt[3] / tt[2];
-                gam[3] = getGama(tt[3], gamopt);
+                gam[3] = getGamma(tt[3], gamopt);
                 cp[3] = getCp(tt[3], gamopt);
                 tt[4] = tt4 * throtl / 100.0;
-                gam[4] = getGama(tt[4], gamopt);
+                gam[4] = getGamma(tt[4], gamopt);
                 cp[4] = getCp(tt[4], gamopt);
                 trat[4] = tt[4] / tt[3];
                 pt[4] = pt[3] * prat[4];
                 delhht = delhc;
                 deltht = delhht / cp[4];
                 tt[5] = tt[4] - deltht;
-                gam[5] = getGama(tt[5], gamopt);
+                gam[5] = getGamma(tt[5], gamopt);
                 cp[5] = getCp(tt[5], gamopt);
                 trat[5] = tt[5] / tt[4];
                 prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
@@ -594,7 +581,7 @@ namespace AJE
                 tt[13] = tt[2] + deltf;
                 pt[13] = pt[2] * prat[13];
                 trat[13] = tt[13] / tt[2];
-                gam[13] = getGama(tt[13], gamopt);
+                gam[13] = getGamma(tt[13], gamopt);
                 cp[13] = getCp(tt[13], gamopt);
                 prat[3] = p3p2d;                      /*										 core compressor */
                 if (prat[3] < .5) prat[3] = .5;
@@ -604,17 +591,17 @@ namespace AJE
                 tt[3] = tt[13] + deltc;
                 pt[3] = pt[13] * prat[3];
                 trat[3] = tt[3] / tt[13];
-                gam[3] = getGama(tt[3], gamopt);
+                gam[3] = getGamma(tt[3], gamopt);
                 cp[3] = getCp(tt[3], gamopt);
                 tt[4] = tt4 * throtl / 100.0;
                 pt[4] = pt[3] * prat[4];
-                gam[4] = getGama(tt[4], gamopt);
+                gam[4] = getGamma(tt[4], gamopt);
                 cp[4] = getCp(tt[4], gamopt);
                 trat[4] = tt[4] / tt[3];
                 delhht = delhc;
                 deltht = delhht / cp[4];
                 tt[5] = tt[4] - deltht;
-                gam[5] = getGama(tt[5], gamopt);
+                gam[5] = getGamma(tt[5], gamopt);
                 cp[5] = getCp(tt[5], gamopt);
                 trat[5] = tt[5] / tt[4];
                 prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
@@ -623,7 +610,7 @@ namespace AJE
                 delhlt = (1.0 + byprat) * delhf;
                 deltlt = delhlt / cp[5];
                 tt[15] = tt[5] - deltlt;
-                gam[15] = getGama(tt[15], gamopt);
+                gam[15] = getGamma(tt[15], gamopt);
                 cp[15] = getCp(tt[15], gamopt);
                 trat[15] = tt[15] / tt[5];
                 prat[15] = Math.Pow((1.0 - delhlt / cp[5] / tt[5] / eta[5]),
@@ -637,15 +624,15 @@ namespace AJE
                 pt[3] = pt[2] * prat[3];
                 tt[3] = tt[2];
                 trat[3] = 1.0;
-                gam[3] = getGama(tt[3], gamopt);
+                gam[3] = getGamma(tt[3], gamopt);
                 cp[3] = getCp(tt[3], gamopt);
                 tt[4] = tt4 * throtl / 100.0;
-                gam[4] = getGama(tt[4], gamopt);
+                gam[4] = getGamma(tt[4], gamopt);
                 cp[4] = getCp(tt[4], gamopt);
                 trat[4] = tt[4] / tt[3];
                 pt[4] = pt[3] * prat[4];
                 tt[5] = tt[4];
-                gam[5] = getGama(tt[5], gamopt);
+                gam[5] = getGamma(tt[5], gamopt);
                 cp[5] = getCp(tt[5], gamopt);
                 trat[5] = 1.0;
                 prat[5] = 1.0;
@@ -673,7 +660,7 @@ namespace AJE
             pt[6] = pt[15];
             trat[6] = 1.0;
             tt[6] = tt[15];
-            gam[6] = getGama(tt[6], gamopt);
+            gam[6] = getGamma(tt[6], gamopt);
             cp[6] = getCp(tt[6], gamopt);
             if (abflag > 0)
             {                   /*						 afterburner */
@@ -683,7 +670,7 @@ namespace AJE
             }
             tt[7] = tt[6] * trat[7];
             pt[7] = pt[6] * prat[7];
-            gam[7] = getGama(tt[7], gamopt);
+            gam[7] = getGamma(tt[7], gamopt);
             cp[7] = getCp(tt[7], gamopt);
             /*						 engine press ratio EPR*/
             epr = prat[7] * prat[15] * prat[5] * prat[4] * prat[3] * prat[13];
@@ -698,11 +685,11 @@ namespace AJE
             int index;
 
             rg1 = 53.3;
-            rg = cpair * (gama - 1.0) / gama;
+            rg = cpair * (gamma - 1.0) / gamma;
             cp3 = getCp(tt[3], gamopt);                  /*						BTU/lbm R */
             g0 = 32.1740;
             ues = 0.0;
-            game = getGama(tt[5], gamopt);
+            game = getGamma(tt[5], gamopt);
             fac1 = (game - 1.0) / game;
             cpe = getCp(tt[5], gamopt);
             // remove minimums for eta7 and eta4
@@ -718,7 +705,7 @@ namespace AJE
                 eair = getAir(1.0, game) * 144f * a8 * pt[8] / 14.7 /
                        Math.Sqrt(etr * tt[0] / 518f);
                 m2 = getMach(0, eair * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * acore * 144f), gama);
+                    (prat[2] * pt[0] / 14.7 * acore * 144f), gamma);
                 npr = pt[8] / ps0;
                 uexit = Math.Sqrt(2.0 * rgas / fac1 * etr * tt[0] * eta[7] *
                     (1.0 - Math.Pow(1.0 / npr, fac1)));
@@ -730,12 +717,12 @@ namespace AJE
             // turbo fan -- added terms for fan flow
             if (entype == 2)
             {
-                fac1 = (gama - 1.0) / gama;
+                fac1 = (gamma - 1.0) / gamma;
                 snpr = pt[13] / ps0;
                 ues = Math.Sqrt(2.0 * rgas / fac1 * tt[13] * eta[7] *
                     (1.0 - Math.Pow(1.0 / snpr, fac1)));
                 m2 = getMach(0, eair * (1.0 + byprat) * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * afan * 144f), gama);
+                    (prat[2] * pt[0] / 14.7 * afan * 144f), gamma);
                 if (snpr <= 1.893) pfexit = ps0;
                 else pfexit = .52828 * pt[13];
                 fgros = fgros + (byprat * ues + (pfexit - ps0) * 144f * byprat * acore / eair) / g0;
@@ -748,7 +735,7 @@ namespace AJE
                 eair = getAir(1.0, game) * 144.0 * a2 * arthd * epr * prat[2] * pt[0] / 14.7 /
                        Math.Sqrt(etr * tt[0] / 518f);
                 m2 = getMach(0, eair * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * acore * 144f), gama);
+                    (prat[2] * pt[0] / 14.7 * acore * 144f), gamma);
                 mexit = getMach(2, (getAir(1.0, game) / arexitd), game);
                 uexit = mexit * Math.Sqrt(game * rgas * etr * tt[0] * eta[7] /
                     (1.0 + .5 * (game - 1.0) * mexit * mexit));
@@ -762,7 +749,7 @@ namespace AJE
             if (entype == 2) dram = dram + u0 * byprat / g0;
 
             // mass flow ratio 
-            if (fsmach > .01) mfr = getAir(m2, gama) * prat[2] / getAir(fsmach, gama);
+            if (fsmach > .01) mfr = getAir(m2, gamma) * prat[2] / getAir(fsmach, gamma);
             else mfr = 5f;
 
             // net thrust
@@ -861,7 +848,7 @@ namespace AJE
             if (entype < 3)
             {
                 //    if (tt[2] > tinlt) {
-                fireflag = (float)Math.Max(fireflag, (float)ts00 * (1.0 + .5 * (gama - 1.0) * fsmach * fsmach) / tinlt);
+                fireflag = (float)Math.Max(fireflag, (float)ts00 * (1.0 + .5 * (gamma - 1.0) * fsmach * fsmach) / tinlt);
                 /*								        out.vars.to1.setForeground(Color.red) ;
              out.vars.to2.setForeground(Color.red) ; */
                 //    }
@@ -939,17 +926,17 @@ namespace AJE
 
             if (entype == 3)
             {      // ramjets
-                game = getGama(tt[4], gamopt);
+                game = getGamma(tt[4], gamopt);
                 if (athsched == 0)
                 {   // scheduled throat area
-                    arthd = getAir(fsmach, gama) * Math.Sqrt(etr) /
+                    arthd = getAir(fsmach, gamma) * Math.Sqrt(etr) /
                             (getAir(1.0, game) * epr * prat[2]);
                     if (arthd < arthmn) arthd = arthmn;
                     if (arthd > arthmx) arthd = arthmx;
                 }
                 if (aexsched == 0)
                 {   // scheduled exit area
-                    mexit = Math.Sqrt((2.0 / (game - 1.0)) * ((1.0 + .5 * (gama - 1.0) * fsmach * fsmach)
+                    mexit = Math.Sqrt((2.0 / (game - 1.0)) * ((1.0 + .5 * (gamma - 1.0) * fsmach * fsmach)
                         * Math.Pow((epr * prat[2]), (game - 1.0) / game) - 1.0));
                     arexitd = getAir(1.0, game) / getAir(mexit, game);
                     if (arexitd < arexmn) arexitd = arexmn;
@@ -991,7 +978,7 @@ namespace AJE
             return number;
         }
 
-        public double getGama(double temp, int opt)
+        public double getGamma(double temp, int opt)
         {
             // Utility to get gamma as a function of temp 
             double number, a, b, c, d;
@@ -1010,6 +997,7 @@ namespace AJE
             return (number);
         }
 
+        // specific heat of air at constant pressure, as defined by temperature.
         public double getCp(double temp, int opt)
         {
             // Utility to get cp as a function of temp 
@@ -1075,10 +1063,10 @@ namespace AJE
             double wc1, wc2, mgueso, mach2, g1, gm1, g2, gm2;
             double fac1, fac2, fac3, fac4;
 
-            g1 = getGama(tlow, gamopt);
+            g1 = getGamma(tlow, gamopt);
             gm1 = g1 - 1.0;
             wc1 = getAir(mach1, g1);
-            g2 = getGama(tlow * ttrat, gamopt);
+            g2 = getGamma(tlow * ttrat, gamopt);
             gm2 = g2 - 1.0;
             number = .95;
             /*						 iterate for mach downstream */
@@ -1121,3 +1109,4 @@ namespace AJE
 
 
 }
+
