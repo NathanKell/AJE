@@ -72,6 +72,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxThrust = 99999;
 
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float ABIspMult = 1.0f;
+
 
         public EngineWrapper engine;
         public bool useAB = false;
@@ -303,7 +306,7 @@ namespace AJE
 
                     aje.comPute();
                     engine.SetThrust(((float)aje.fnlb) * 0.004448f / OverallThrottle);
-                    engine.SetIsp((float)aje.isp);
+                    engine.SetIsp((float)aje.isp * ABIspMult);
                     Mode = "Afterburner " + System.Convert.ToString((int)((OverallThrottle - ABthreshold) / (1 - ABthreshold) * 100f)) + "%";
                 }
 
