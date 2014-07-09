@@ -9,7 +9,7 @@ namespace AJE
     public class AJESolver
     {
         public double FARts0, FARps0;
-        double convdr = 3.14515926 / 180.0;
+        double DEG2RAD = 3.14515926 / 180.0;
         public double precooled, ts00;
         public int abflag, entype, lunits, inflag, varflag, pt2flag, wtflag;
         public int abkeep, pltkeep, move;
@@ -93,11 +93,7 @@ namespace AJE
 
             getThermo();
 
-            if (inflag == 0) getGeo(); /*						determine engine size and geometry*/
-            if (inflag == 1)
-            {
-                if (entype < 3) a8 = a8d * Math.Sqrt(trat[7]) / prat[7];
-            }
+            getGeo(); /*						determine engine size and geometry*/
 
             //      view.getDrawGeo() ;
 
@@ -227,122 +223,6 @@ namespace AJE
             BTU2Joules = 1055f; BTU2kJ = 1.055;
             Lb2kg = .453592; PSI2kPa = 6.89475729; F2C = 0.555555;
             Slug2kg = 14.5939029; tref = 273.15;
-            return;
-        }
-
-        public void myDesign()
-        {
-
-            ensav = entype;
-            absav = abflag;
-            flsav = fueltype;
-            fhsav = fhvd / flconv;
-            t4sav = tt4d / F2C;
-            t7sav = tt7d / F2C;
-            p3sav = p3p2d;
-            p3fsav = p3fp2d;
-            bysav = byprat;
-            acsav = acore;
-            a2sav = a2d / aconv;
-            a4sav = a4;
-            a4psav = a4p;
-            gamsav = gama;
-            gamosav = gamopt;
-            ptfsav = pt2flag;
-            et2sav = eta[2];
-            pr2sav = prat[2];
-            pr4sav = prat[4];
-            et3sav = eta[3];
-            et4sav = eta[4];
-            et5sav = eta[5];
-            et7sav = eta[7];
-            et13sav = eta[13];
-            a8sav = a8d / aconv;
-            a8mxsav = a8max / aconv;
-            a8rtsav = a8rat;
-
-            u0mxsav = u0max / MPH2KPH;
-            u0sav = u0d / MPH2KPH;
-            arssav = arsched;
-
-            wtfsav = wtflag; wtsav = weight;
-            minsav = minlt; dinsav = dinlt; tinsav = tinlt;
-            mfnsav = mfan; dfnsav = dfan; tfnsav = tfan;
-            mcmsav = mcomp; dcmsav = dcomp; tcmsav = tcomp;
-            mbrsav = mburner; dbrsav = dburner; tbrsav = tburner;
-            mtrsav = mturbin; dtrsav = dturbin; ttrsav = tturbin;
-            mnlsav = mnozl; dnlsav = dnozl; tnlsav = tnozl;
-            mnrsav = mnozr; dnrsav = dnozr; tnrsav = tnozr;
-            ncsav = ncflag; ntsav = ntflag;
-
-            if (entype == 3)
-            {
-                arthsav = athsched;
-                arxsav = aexsched;
-                artsav = arthd;
-                arexsav = arexitd;
-            }
-
-            return;
-        }
-
-        public void loadMine()
-        {
-
-            entype = ensav;
-            abflag = absav;
-            fueltype = flsav;
-            fhvd = fhv = fhsav;
-            tt[4] = tt4 = tt4d = t4sav;
-            tt[7] = tt7 = tt7d = t7sav;
-            prat[3] = p3p2d = p3sav;
-            prat[13] = p3fp2d = p3fsav;
-            byprat = bysav;
-            acore = acsav;
-            afan = acore * (1.0 + byprat);
-            a2d = a2 = a2sav;
-            diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            a4 = a4sav;
-            a4p = a4psav;
-            acap = .9 * a2;
-            gama = gamsav;
-            gamopt = gamosav;
-            pt2flag = ptfsav;
-            eta[2] = et2sav;
-            prat[2] = pr2sav;
-            prat[4] = pr4sav;
-            eta[3] = et3sav;
-            eta[4] = et4sav;
-            eta[5] = et5sav;
-            eta[7] = et7sav;
-            eta[13] = et13sav;
-            a8d = a8sav;
-            a8max = a8mxsav;
-            a8rat = a8rtsav;
-
-            u0max = u0mxsav;
-            u0d = u0sav;
-            arsched = arssav;
-
-            wtflag = wtfsav; weight = wtsav;
-            minlt = minsav; dinlt = dinsav; tinlt = tinsav;
-            mfan = mfnsav; dfan = dfnsav; tfan = tfnsav;
-            mcomp = mcmsav; dcomp = dcmsav; tcomp = tcmsav;
-            mburner = mbrsav; dburner = dbrsav; tburner = tbrsav;
-            mturbin = mtrsav; dturbin = dtrsav; tturbin = ttrsav;
-            mnozl = mnlsav; dnozl = dnlsav; tnozl = tnlsav;
-            mnozr = mnrsav; dnozr = dnrsav; tnozr = tnrsav;
-            ncflag = ncsav; ntflag = ntsav;
-
-            if (entype == 3)
-            {
-                athsched = arthsav;
-                aexsched = arxsav;
-                arthd = artsav;
-                arexitd = arexsav;
-            }
-
-            //       con.setPanl() ;
             return;
         }
 
@@ -632,8 +512,6 @@ namespace AJE
             double delhc, delhht, delhf, delhlt;
             double deltc, deltht, deltf, deltlt;
             int itcount, index;
-            float fl1;
-            int i1;
             /*						   inlet recovery  */
             if (pt2flag != 0) //was ==0 in original code
             {                    /*						     mil spec      */
@@ -646,10 +524,6 @@ namespace AJE
                     prat[2] = 1.0;
                 }
                 eta[2] = prat[2];
-                fl1 = filter3(prat[2]);
-                //       in.inlet.left.f1.setText(String.valueOf(fl1)) ;
-                i1 = (int)(((prat[2] - etmin) / (etmax - etmin)) * 1000f);
-                //       in.inlet.right.s1.setValue(i1) ;
             }
             else
             {                       /*						 enter value */
@@ -669,299 +543,131 @@ namespace AJE
             cp[2] = getCp(tt[2], gamopt);
             pt[2] = pt[1] * prat[2];
             /*						 design - p3p2 specified - tt4 specified */
-            if (inflag == 0)
-            {
-
-                if (entype <= 1)
-                {              /*								 turbojet */
-                    prat[3] = p3p2d;                      /*										 core compressor */
-                    if (prat[3] < .5) prat[3] = .5;
-                    delhc = (cp[2] * tt[2] / eta[3]) *
-                            (Math.Pow(prat[3], (gam[2] - 1.0) / gam[2]) - 1.0);
-                    deltc = delhc / cp[2];
-                    pt[3] = pt[2] * prat[3];
-                    tt[3] = tt[2] + deltc;
-                    trat[3] = tt[3] / tt[2];
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    tt[4] = tt4 * throtl / 100.0;
-                    gam[4] = getGama(tt[4], gamopt);
-                    cp[4] = getCp(tt[4], gamopt);
-                    trat[4] = tt[4] / tt[3];
-                    pt[4] = pt[3] * prat[4];
-                    delhht = delhc;
-                    deltht = delhht / cp[4];
-                    tt[5] = tt[4] - deltht;
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    trat[5] = tt[5] / tt[4];
-                    prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
-                        (gam[4] / (gam[4] - 1.0)));
-                    pt[5] = pt[4] * prat[5];
-                    /*										 fan conditions */
-                    prat[13] = 1.0;
-                    trat[13] = 1.0;
-                    tt[13] = tt[2];
-                    pt[13] = pt[2];
-                    gam[13] = gam[2];
-                    cp[13] = cp[2];
-                    prat[15] = 1.0;
-                    pt[15] = pt[5];
-                    trat[15] = 1.0;
-                    tt[15] = tt[5];
-                    gam[15] = gam[5];
-                    cp[15] = cp[5];
-                }
-
-                if (entype == 2)
-                {                         /*								 turbofan */
-                    prat[13] = p3fp2d;
-                    if (prat[13] < .5) prat[13] = .5;
-                    delhf = (cp[2] * tt[2] / eta[13]) *
-                            (Math.Pow(prat[13], (gam[2] - 1.0) / gam[2]) - 1.0);
-                    deltf = delhf / cp[2];
-                    tt[13] = tt[2] + deltf;
-                    pt[13] = pt[2] * prat[13];
-                    trat[13] = tt[13] / tt[2];
-                    gam[13] = getGama(tt[13], gamopt);
-                    cp[13] = getCp(tt[13], gamopt);
-                    prat[3] = p3p2d;                      /*										 core compressor */
-                    if (prat[3] < .5) prat[3] = .5;
-                    delhc = (cp[13] * tt[13] / eta[3]) *
-                            (Math.Pow(prat[3], (gam[13] - 1.0) / gam[13]) - 1.0);
-                    deltc = delhc / cp[13];
-                    tt[3] = tt[13] + deltc;
-                    pt[3] = pt[13] * prat[3];
-                    trat[3] = tt[3] / tt[13];
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    tt[4] = tt4 * throtl / 100.0;
-                    pt[4] = pt[3] * prat[4];
-                    gam[4] = getGama(tt[4], gamopt);
-                    cp[4] = getCp(tt[4], gamopt);
-                    trat[4] = tt[4] / tt[3];
-                    delhht = delhc;
-                    deltht = delhht / cp[4];
-                    tt[5] = tt[4] - deltht;
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    trat[5] = tt[5] / tt[4];
-                    prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
-                        (gam[4] / (gam[4] - 1.0)));
-                    pt[5] = pt[4] * prat[5];
-                    delhlt = (1.0 + byprat) * delhf;
-                    deltlt = delhlt / cp[5];
-                    tt[15] = tt[5] - deltlt;
-                    gam[15] = getGama(tt[15], gamopt);
-                    cp[15] = getCp(tt[15], gamopt);
-                    trat[15] = tt[15] / tt[5];
-                    prat[15] = Math.Pow((1.0 - delhlt / cp[5] / tt[5] / eta[5]),
-                        (gam[5] / (gam[5] - 1.0)));
-                    pt[15] = pt[5] * prat[15];
-                }
-
-                if (entype == 3)
-                {              /*								 ramjet */
-                    prat[3] = 1.0;
-                    pt[3] = pt[2] * prat[3];
-                    tt[3] = tt[2];
-                    trat[3] = 1.0;
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    tt[4] = tt4 * throtl / 100.0;
-                    gam[4] = getGama(tt[4], gamopt);
-                    cp[4] = getCp(tt[4], gamopt);
-                    trat[4] = tt[4] / tt[3];
-                    pt[4] = pt[3] * prat[4];
-                    tt[5] = tt[4];
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    trat[5] = 1.0;
-                    prat[5] = 1.0;
-                    pt[5] = pt[4];
-                    /*										 fan conditions */
-                    prat[13] = 1.0;
-                    trat[13] = 1.0;
-                    tt[13] = tt[2];
-                    pt[13] = pt[2];
-                    gam[13] = gam[2];
-                    cp[13] = cp[2];
-                    prat[15] = 1.0;
-                    pt[15] = pt[5];
-                    trat[15] = 1.0;
-                    tt[15] = tt[5];
-                    gam[15] = gam[5];
-                    cp[15] = cp[5];
-                }
-
-                tt[7] = tt7;
-            }
-            /*						 analysis -assume flow choked at both turbine entrances */
-            /* and nozzle throat ... then*/
-            else
-            {
+            if (entype <= 1)
+            {              /*								 turbojet */
+                prat[3] = p3p2d;                      /*										 core compressor */
+                if (prat[3] < .5) prat[3] = .5;
+                delhc = (cp[2] * tt[2] / eta[3]) *
+                        (Math.Pow(prat[3], (gam[2] - 1.0) / gam[2]) - 1.0);
+                deltc = delhc / cp[2];
+                pt[3] = pt[2] * prat[3];
+                tt[3] = tt[2] + deltc;
+                trat[3] = tt[3] / tt[2];
+                gam[3] = getGama(tt[3], gamopt);
+                cp[3] = getCp(tt[3], gamopt);
                 tt[4] = tt4 * throtl / 100.0;
                 gam[4] = getGama(tt[4], gamopt);
                 cp[4] = getCp(tt[4], gamopt);
-                if (a4 < .02) a4 = .02;
-
-                if (entype <= 1)
-                {              /*								 turbojet */
-                    dela = .2;                           /*										 iterate to get t5t4 */
-                    trat[5] = 1.0;
-                    t5t4n = .5;
-                    itcount = 0;
-                    while (Math.Abs(dela) > .001 && itcount < 20)
-                    {
-                        ++itcount;
-                        delan = a8d / a4 - Math.Sqrt(t5t4n) *
-                                Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - t5t4n)),
-                                    -gam[4] / (gam[4] - 1.0));
-                        deriv = (delan - dela) / (t5t4n - trat[5]);
-                        dela = delan;
-                        trat[5] = t5t4n;
-                        t5t4n = trat[5] - dela / deriv;
-                    }
-                    tt[5] = tt[4] * trat[5];
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    deltht = tt[5] - tt[4];
-                    delhht = cp[4] * deltht;
-                    prat[5] = Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - trat[5])),
-                        gam[4] / (gam[4] - 1.0));
-                    delhc = delhht;           /*										 compressor work */
-                    deltc = -delhc / cp[2];
-                    tt[3] = tt[2] + deltc;
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    trat[3] = tt[3] / tt[2];
-                    prat[3] = Math.Pow((1.0 + eta[3] * (trat[3] - 1.0)),
-                        gam[2] / (gam[2] - 1.0));
-                    trat[4] = tt[4] / tt[3];
-                    pt[3] = pt[2] * prat[3];
-                    pt[4] = pt[3] * prat[4];
-                    pt[5] = pt[4] * prat[5];
-                    /*										 fan conditions */
-                    prat[13] = 1.0;
-                    trat[13] = 1.0;
-                    tt[13] = tt[2];
-                    pt[13] = pt[2];
-                    gam[13] = gam[2];
-                    cp[13] = cp[2];
-                    prat[15] = 1.0;
-                    pt[15] = pt[5];
-                    trat[15] = 1.0;
-                    tt[15] = tt[5];
-                    gam[15] = gam[5];
-                    cp[15] = cp[5];
-                }
-
-                if (entype == 2)
-                {                        /*								  turbofan */
-                    dela = .2;                           /*										 iterate to get t5t4 */
-                    trat[5] = 1.0;
-                    t5t4n = .5;
-                    itcount = 0;
-                    while (Math.Abs(dela) > .001 && itcount < 20)
-                    {
-                        ++itcount;
-                        delan = a4p / a4 - Math.Sqrt(t5t4n) *
-                                Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - t5t4n)),
-                                    -gam[4] / (gam[4] - 1.0));
-                        deriv = (delan - dela) / (t5t4n - trat[5]);
-                        dela = delan;
-                        trat[5] = t5t4n;
-                        t5t4n = trat[5] - dela / deriv;
-                    }
-                    tt[5] = tt[4] * trat[5];
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    deltht = tt[5] - tt[4];
-                    delhht = cp[4] * deltht;
-                    prat[5] = Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - trat[5])),
-                        gam[4] / (gam[4] - 1.0));
-                    /*										 iterate to get t15t14 */
-                    dela = .2;
-                    trat[15] = 1.0;
-                    t5t4n = .5;
-                    itcount = 0;
-                    while (Math.Abs(dela) > .001 && itcount < 20)
-                    {
-                        ++itcount;
-                        delan = a8d / a4p - Math.Sqrt(t5t4n) *
-                                Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - t5t4n)),
-                                    -gam[5] / (gam[5] - 1.0));
-                        deriv = (delan - dela) / (t5t4n - trat[15]);
-                        dela = delan;
-                        trat[15] = t5t4n;
-                        t5t4n = trat[15] - dela / deriv;
-                    }
-                    tt[15] = tt[5] * trat[15];
-                    gam[15] = getGama(tt[15], gamopt);
-                    cp[15] = getCp(tt[15], gamopt);
-                    deltlt = tt[15] - tt[5];
-                    delhlt = cp[5] * deltlt;
-                    prat[15] = Math.Pow((1.0 - (1.0 / eta[5]) * (1.0 - trat[15])),
-                        gam[5] / (gam[5] - 1.0));
-                    byprat = afan / acore - 1.0;
-                    delhf = delhlt / (1.0 + byprat);              /*										 fan work */
-                    deltf = -delhf / cp[2];
-                    tt[13] = tt[2] + deltf;
-                    gam[13] = getGama(tt[13], gamopt);
-                    cp[13] = getCp(tt[13], gamopt);
-                    trat[13] = tt[13] / tt[2];
-                    prat[13] = Math.Pow((1.0 + eta[13] * (trat[13] - 1.0)),
-                        gam[2] / (gam[2] - 1.0));
-                    delhc = delhht;                         /*										 compressor work */
-                    deltc = -delhc / cp[13];
-                    tt[3] = tt[13] + deltc;
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    trat[3] = tt[3] / tt[13];
-                    prat[3] = Math.Pow((1.0 + eta[3] * (trat[3] - 1.0)),
-                        gam[13] / (gam[13] - 1.0));
-                    trat[4] = tt[4] / tt[3];
-                    pt[13] = pt[2] * prat[13];
-                    pt[3] = pt[13] * prat[3];
-                    pt[4] = pt[3] * prat[4];
-                    pt[5] = pt[4] * prat[5];
-                    pt[15] = pt[5] * prat[15];
-                }
-
-                if (entype == 3)
-                {              /*								 ramjet */
-                    prat[3] = 1.0;
-                    pt[3] = pt[2] * prat[3];
-                    tt[3] = tt[2];
-                    trat[3] = 1.0;
-                    gam[3] = getGama(tt[3], gamopt);
-                    cp[3] = getCp(tt[3], gamopt);
-                    tt[4] = tt4 * throtl / 100.0;
-                    trat[4] = tt[4] / tt[3];
-                    pt[4] = pt[3] * prat[4];
-                    tt[5] = tt[4];
-                    gam[5] = getGama(tt[5], gamopt);
-                    cp[5] = getCp(tt[5], gamopt);
-                    trat[5] = 1.0;
-                    prat[5] = 1.0;
-                    pt[5] = pt[4];
-                    /*										 fan conditions */
-                    prat[13] = 1.0;
-                    trat[13] = 1.0;
-                    tt[13] = tt[2];
-                    pt[13] = pt[2];
-                    gam[13] = gam[2];
-                    cp[13] = cp[2];
-                    prat[15] = 1.0;
-                    pt[15] = pt[5];
-                    trat[15] = 1.0;
-                    tt[15] = tt[5];
-                    gam[15] = gam[5];
-                    cp[15] = cp[5];
-                }
-
-                if (abflag == 1) tt[7] = tt7;
+                trat[4] = tt[4] / tt[3];
+                pt[4] = pt[3] * prat[4];
+                delhht = delhc;
+                deltht = delhht / cp[4];
+                tt[5] = tt[4] - deltht;
+                gam[5] = getGama(tt[5], gamopt);
+                cp[5] = getCp(tt[5], gamopt);
+                trat[5] = tt[5] / tt[4];
+                prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
+                    (gam[4] / (gam[4] - 1.0)));
+                pt[5] = pt[4] * prat[5];
+                /*										 fan conditions */
+                prat[13] = 1.0;
+                trat[13] = 1.0;
+                tt[13] = tt[2];
+                pt[13] = pt[2];
+                gam[13] = gam[2];
+                cp[13] = cp[2];
+                prat[15] = 1.0;
+                pt[15] = pt[5];
+                trat[15] = 1.0;
+                tt[15] = tt[5];
+                gam[15] = gam[5];
+                cp[15] = cp[5];
             }
+
+            if (entype == 2)
+            {                         /*								 turbofan */
+                prat[13] = p3fp2d;
+                if (prat[13] < .5) prat[13] = .5;
+                delhf = (cp[2] * tt[2] / eta[13]) *
+                        (Math.Pow(prat[13], (gam[2] - 1.0) / gam[2]) - 1.0);
+                deltf = delhf / cp[2];
+                tt[13] = tt[2] + deltf;
+                pt[13] = pt[2] * prat[13];
+                trat[13] = tt[13] / tt[2];
+                gam[13] = getGama(tt[13], gamopt);
+                cp[13] = getCp(tt[13], gamopt);
+                prat[3] = p3p2d;                      /*										 core compressor */
+                if (prat[3] < .5) prat[3] = .5;
+                delhc = (cp[13] * tt[13] / eta[3]) *
+                        (Math.Pow(prat[3], (gam[13] - 1.0) / gam[13]) - 1.0);
+                deltc = delhc / cp[13];
+                tt[3] = tt[13] + deltc;
+                pt[3] = pt[13] * prat[3];
+                trat[3] = tt[3] / tt[13];
+                gam[3] = getGama(tt[3], gamopt);
+                cp[3] = getCp(tt[3], gamopt);
+                tt[4] = tt4 * throtl / 100.0;
+                pt[4] = pt[3] * prat[4];
+                gam[4] = getGama(tt[4], gamopt);
+                cp[4] = getCp(tt[4], gamopt);
+                trat[4] = tt[4] / tt[3];
+                delhht = delhc;
+                deltht = delhht / cp[4];
+                tt[5] = tt[4] - deltht;
+                gam[5] = getGama(tt[5], gamopt);
+                cp[5] = getCp(tt[5], gamopt);
+                trat[5] = tt[5] / tt[4];
+                prat[5] = Math.Pow((1.0 - delhht / cp[4] / tt[4] / eta[5]),
+                    (gam[4] / (gam[4] - 1.0)));
+                pt[5] = pt[4] * prat[5];
+                delhlt = (1.0 + byprat) * delhf;
+                deltlt = delhlt / cp[5];
+                tt[15] = tt[5] - deltlt;
+                gam[15] = getGama(tt[15], gamopt);
+                cp[15] = getCp(tt[15], gamopt);
+                trat[15] = tt[15] / tt[5];
+                prat[15] = Math.Pow((1.0 - delhlt / cp[5] / tt[5] / eta[5]),
+                    (gam[5] / (gam[5] - 1.0)));
+                pt[15] = pt[5] * prat[15];
+            }
+
+            if (entype == 3)
+            {              /*								 ramjet */
+                prat[3] = 1.0;
+                pt[3] = pt[2] * prat[3];
+                tt[3] = tt[2];
+                trat[3] = 1.0;
+                gam[3] = getGama(tt[3], gamopt);
+                cp[3] = getCp(tt[3], gamopt);
+                tt[4] = tt4 * throtl / 100.0;
+                gam[4] = getGama(tt[4], gamopt);
+                cp[4] = getCp(tt[4], gamopt);
+                trat[4] = tt[4] / tt[3];
+                pt[4] = pt[3] * prat[4];
+                tt[5] = tt[4];
+                gam[5] = getGama(tt[5], gamopt);
+                cp[5] = getCp(tt[5], gamopt);
+                trat[5] = 1.0;
+                prat[5] = 1.0;
+                pt[5] = pt[4];
+                /*										 fan conditions */
+                prat[13] = 1.0;
+                trat[13] = 1.0;
+                tt[13] = tt[2];
+                pt[13] = pt[2];
+                gam[13] = gam[2];
+                cp[13] = cp[2];
+                prat[15] = 1.0;
+                pt[15] = pt[5];
+                trat[15] = 1.0;
+                tt[15] = tt[5];
+                gam[15] = gam[5];
+                cp[15] = cp[5];
+            }
+
+            tt[7] = tt7;
+            /*						 analysis -assume flow choked at both turbine entrances */
+            /* and nozzle throat ... then*/
 
             prat[6] = 1.0;
             pt[6] = pt[15];
@@ -1151,13 +857,6 @@ namespace AJE
                 }
             }
             // check for temp limits
-            /*						  out.vars.to1.setForeground(Color.yellow) ;
-       out.vars.to2.setForeground(Color.yellow) ;
-       out.vars.to3.setForeground(Color.yellow) ;
-       out.vars.to4.setForeground(Color.yellow) ;
-       out.vars.to5.setForeground(Color.yellow) ;
-       out.vars.to6.setForeground(Color.yellow) ;
-       out.vars.to7.setForeground(Color.yellow) ; */
             if (entype < 3)
             {
                 //    if (tt[2] > tinlt) {
@@ -1212,8 +911,6 @@ namespace AJE
         {
             /*						 determine geometric variables */
             double game;
-            float fl1;
-            int i1;
 
             if (entype <= 2)
             {          // turbine engines
@@ -1224,29 +921,11 @@ namespace AJE
                 if (a8rat > a8max)
                 {
                     a8rat = a8max;
-                    if (lunits <= 1)
-                    {
-                        fl1 = filter3(a8rat);
-                        //     in.nozl.left.f3.setText(String.valueOf(fl1)) ;
-                        i1 = (int)(((a8rat - a8min) / (a8max - a8min)) * 1000f);
-                        //    in.nozl.right.s3.setValue(i1) ;
-                    }
-                    if (lunits == 2)
-                    {
-                        fl1 = filter3(100f * (a8rat - a8ref) / a8ref);
-                        //     in.nozl.left.f3.setText(String.valueOf(fl1)) ;
-                        i1 = (int)((((100f * (a8rat - a8ref) / a8ref) + 10.0) / 20.0) * 1000f);
-                        //      in.nozl.right.s3.setValue(i1) ;
-                    }
                 }
                 /*								    dumb down limit - a8 schedule */
                 if (arsched == 0)
                 {
                     a8rat = a8max;
-                    fl1 = filter3(a8rat);
-                    //   in.nozl.left.f3.setText(String.valueOf(fl1)) ;
-                    i1 = (int)(((a8rat - a8min) / (a8max - a8min)) * 1000f);
-                    //   in.nozl.right.s3.setValue(i1) ;
                 }
                 a8 = a8rat * acore;
                 a8d = a8 * prat[7] / Math.Sqrt(trat[7]);
@@ -1266,10 +945,6 @@ namespace AJE
                             (getAir(1.0, game) * epr * prat[2]);
                     if (arthd < arthmn) arthd = arthmn;
                     if (arthd > arthmx) arthd = arthmx;
-                    fl1 = filter3(arthd);
-                    //     in.nozr.left.f3.setText(String.valueOf(fl1)) ;
-                    i1 = (int)(((arthd - arthmn) / (arthmx - arthmn)) * 1000f);
-                    //    in.nozr.right.s3.setValue(i1) ;
                 }
                 if (aexsched == 0)
                 {   // scheduled exit area
@@ -1278,10 +953,6 @@ namespace AJE
                     arexitd = getAir(1.0, game) / getAir(mexit, game);
                     if (arexitd < arexmn) arexitd = arexmn;
                     if (arexitd > arexmx) arexitd = arexmx;
-                    fl1 = filter3(arexitd);
-                    //     in.nozr.left.f4.setText(String.valueOf(fl1)) ;
-                    i1 = (int)(((arexitd - arexmn) / (arexmx - arexmn)) * 1000f);
-                    //     in.nozr.right.s4.setValue(i1) ;
                 }
             }
         }
