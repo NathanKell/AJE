@@ -292,7 +292,12 @@ namespace AJE
                 }
                 else
                 {
-                    engine.useEngineResponseTime = false;
+                    // only allow instance response when already at max RPM; if the compressor is still spooling up, it's still spooling up.
+                    if(engine.currentThrottle > ABthreshold)
+                        engine.useEngineResponseTime = false;
+                    else
+                        engine.useEngineResponseTime = true;
+
                     aje.abflag = 1;
                     aje.tt7 = (OverallThrottle - ABthreshold) * (ABmax - ABmin) / (1 - ABthreshold) + ABmin;
 

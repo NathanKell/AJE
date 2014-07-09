@@ -171,6 +171,38 @@ namespace AJE
             }
         }
 
+        public float currentThrottle
+        {
+            get
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        return engine.currentThrottle;
+                    case EngineType.ModuleEngineFX:
+                        return engineFX.currentThrottle;
+                    case EngineType.FSengine:
+                        return 0f;
+                    default:
+                        return 0f;
+                }
+            }
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.currentThrottle = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.currentThrottle = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+
         public bool EngineIgnited
         {
             get
