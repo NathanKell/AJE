@@ -705,8 +705,9 @@ namespace AJE
             game = getGama(tt[5], gamopt);
             fac1 = (game - 1.0) / game;
             cpe = getCp(tt[5], gamopt);
-            if (eta[7] < .8) eta[7] = .8;    /*						 protection during overwriting */
-            if (eta[4] < .8) eta[4] = .8;
+            // remove minimums for eta7 and eta4
+            //if (eta[7] < .8) eta[7] = .8;    /*						 protection during overwriting */
+            //if (eta[4] < .8) eta[4] = .8;
 
             /*						  specific net thrust  - thrust / (g0*airflow) -   lbf/lbm/sec  */
             // turbine engine core
