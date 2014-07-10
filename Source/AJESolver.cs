@@ -13,22 +13,22 @@ namespace AJE
         public double precooled, ts00;
         public int abflag, entype, lunits, inflag, varflag, pt2flag, wtflag;
         public int abkeep, pltkeep, move;
-        public int numeng, gamopt, arsched, plttyp, showcom;
-        public int athsched, aexsched, fueltype, inptype, siztype;
+        public int numeng, gamopt, areaRatioScheduler, plttyp, showcom;
+        public int areaThroatScheduler, areaExitScheduler, fueltype, inptype, siztype;
         // Flow variables
         public double g0d, g0, rgas, gamma, cpair;
         public double tt4, tt4d, tt7, tt7d, t8, p3p2d, p3fp2d, byprat, throtl;
         public double fsmach = 0, alt, ts0, ps0, q0, u0d, u0, a0, rho0, tsout, psout;
-        public double epr, etr, npr, snpr, fnet, fgros, dram, sfc, fa, eair, uexit, ues;
-        public double fnd, fnlb, fglb, drlb, flflo, fuelrat, fntot, eteng;
-        public double arth, arthd, arexit, arexitd;
-        public double mexit, pexit, pfexit;
-        public double arthmn, arthmx, arexmn, arexmx;
-        public double a8, a8rat, a8d, afan, a7, m2, isp;
-        public double acap, a2, a2d, acore, a4, a4p, fhv, fhvd, mfr, diameng;
+        public double epr, etr, npr, snpr, forceNet, forceGross, dragRam, sfc, fa, eair, uexit, ues;
+        public double fnd, forceNetlb, forceGrosslb, dragRamlb, fuelFlowlb, fuelrat, forceNetTotallb, eteng;
+        public double arth, areaRamThroatd, arexit, areaRamExitd;
+        public double machExit, pexit, pfexit;
+        public double areaRamThroatMin, areaRamThroatMax, areaRamExitMin, areaRamExitMax;
+        public double area8, area8rat, area8d, areaFan, a7, m2, isp;
+        public double areaCap, a2, a2d, areaCore, area4, area4p, fhv, fhvd, mfr, diameng;
         public double altmin, altmax, u0min, u0max, thrmin, thrmax, pmax, tmin, tmax;
         public double etmin, etmax, cprmin, cprmax, t4min, t4max;
-        public double a2min, a2max, a8min, a8max, t7min, t7max, diamin, diamax;
+        public double a2min, a2max, a8min, area8max, t7min, t7max, diamin, diamax;
         public double bypmin, bypmax, fprmin, fprmax;
         public double vmn1, vmn2, vmn3, vmn4, vmx1, vmx2, vmx3, vmx4;
         public double FT2M, MPH2KPH, LBF2Newtons, PSI2kPa, F2C, tref, Lb2kg, Slug2kg, BTU2Joules, BTU2kJ;
@@ -161,22 +161,22 @@ namespace AJE
 
             fueltype = 0;
             fhvd = fhv = 18600f;
-            a2d = a2 = acore = 2.0;
+            a2d = a2 = areaCore = 2.0;
             diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            acap = .9 * a2;
-            a8rat = .35;
-            a8 = .7;
-            a8d = .40;
-            arsched = 0;
-            afan = 2.0;
-            a4 = .418;
+            areaCap = .9 * a2;
+            area8rat = .35;
+            area8 = .7;
+            area8d = .40;
+            areaRatioScheduler = 0;
+            areaFan = 2.0;
+            area4 = .418;
 
-            athsched = 1;
-            aexsched = 1;
-            arthmn = 0.1; arthmx = 1.5;
-            arexmn = 1.0; arexmx = 10.0;
-            arthd = arth = .4;
-            arexit = arexitd = 3.0;
+            areaThroatScheduler = 1;
+            areaExitScheduler = 1;
+            areaRamThroatMin = 0.1; areaRamThroatMax = 1.5;
+            areaRamExitMin = 1.0; areaRamExitMax = 10.0;
+            areaRamThroatd = arth = .4;
+            arexit = areaRamExitd = 3.0;
 
             u0min = 0.0; u0max = 1500f;
             altmin = 0.0; altmax = 60000f;
@@ -187,7 +187,7 @@ namespace AJE
             fprmin = 1.0; fprmax = 2.0;
             t4min = 1000.0; t4max = 3200.0;
             t7min = 1000.0; t7max = 4000.0;
-            a8min = 0.1; a8max = 0.4;
+            a8min = 0.1; area8max = 0.4;
             a2min = .001; a2max = 50f;
             diamin = Math.Sqrt(4.0 * a2min / 3.14159);
             diamax = Math.Sqrt(4.0 * a2max / 3.14159);
@@ -195,7 +195,7 @@ namespace AJE
             vmn1 = u0min; vmx1 = u0max;
             vmn2 = altmin; vmx2 = altmax;
             vmn3 = thrmin; vmx3 = thrmax;
-            vmn4 = arexmn; vmx4 = arexmx;
+            vmn4 = areaRamExitMin; vmx4 = areaRamExitMax;
 
             xtrans = 125.0;
             ytrans = 115.0;
@@ -238,13 +238,13 @@ namespace AJE
             prat[3] = p3p2d = 21.86;
             prat[13] = p3fp2d = 1.745;
             byprat = 4.0;
-            acore = 6.965;
-            afan = acore * (1.0 + byprat);
-            a2d = a2 = afan;
+            areaCore = 6.965;
+            areaFan = areaCore * (1.0 + byprat);
+            a2d = a2 = areaFan;
             diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            a4 = .290;
-            a4p = 1.131;
-            acap = .9 * a2;
+            area4 = .290;
+            area4p = 1.131;
+            areaCap = .9 * a2;
             gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
@@ -256,13 +256,13 @@ namespace AJE
             eta[5] = .982;
             eta[7] = 1.0;
             eta[13] = 1.0;
-            a8d = 2.436;
-            a8max = .35;
-            a8rat = .35;
+            area8d = 2.436;
+            area8max = .35;
+            area8rat = .35;
 
             u0max = 1500f;
             u0d = 0.0;
-            arsched = 0;
+            areaRatioScheduler = 0;
 
             wtflag = 0; weight = 8229f;
             minlt = 1; dinlt = 170f; tinlt = 900f;
@@ -289,12 +289,12 @@ namespace AJE
             prat[3] = p3p2d = 8.3;
             prat[13] = p3fp2d = 1.0;
             byprat = 0.0;
-            a2d = a2 = acore = 1.753;
+            a2d = a2 = areaCore = 1.753;
             diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            afan = acore * (1.0 + byprat);
-            a4 = .323;
-            a4p = .818;
-            acap = .9 * a2;
+            areaFan = areaCore * (1.0 + byprat);
+            area4 = .323;
+            area4p = .818;
+            areaCap = .9 * a2;
             gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
@@ -306,13 +306,13 @@ namespace AJE
             eta[5] = .882;
             eta[7] = .97;
             eta[13] = 1.0;
-            a8d = .818;
-            a8max = .467;
-            a8rat = .467;
+            area8d = .818;
+            area8max = .467;
+            area8rat = .467;
 
             u0max = 1500f;
             u0d = 0.0;
-            arsched = 1;
+            areaRatioScheduler = 1;
 
             wtflag = 0; weight = 561f;
             minlt = 1; dinlt = 170f; tinlt = 900f;
@@ -339,12 +339,12 @@ namespace AJE
             prat[3] = p3p2d = 20.04;
             prat[13] = p3fp2d = 1.745;
             byprat = 0.0;
-            a2d = a2 = acore = 6.00;
+            a2d = a2 = areaCore = 6.00;
             diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            afan = acore * (1.0 + byprat);
-            a4 = .472;
-            a4p = 1.524;
-            acap = .9 * a2;
+            areaFan = areaCore * (1.0 + byprat);
+            area4 = .472;
+            area4p = 1.524;
+            areaCap = .9 * a2;
             gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
@@ -356,13 +356,13 @@ namespace AJE
             eta[5] = .982;
             eta[7] = .92;
             eta[13] = 1.0;
-            a8d = 1.524;
-            a8max = .335;
-            a8rat = .335;
+            area8d = 1.524;
+            area8max = .335;
+            area8rat = .335;
 
             u0max = 1500f;
             u0d = 0.0;
-            arsched = 0;
+            areaRatioScheduler = 0;
 
             wtflag = 0; weight = 3875f;
             minlt = 1; dinlt = 170f; tinlt = 900f;
@@ -381,10 +381,10 @@ namespace AJE
         {
 
             entype = 3;
-            athsched = 0;
-            aexsched = 0;
-            arthd = .4;
-            arexitd = 3.0;
+            areaThroatScheduler = 0;
+            areaExitScheduler = 0;
+            areaRamThroatd = .4;
+            areaRamExitd = 3.0;
             abflag = 0;
             fueltype = 0;
             fhvd = fhv = 18600f;
@@ -394,12 +394,12 @@ namespace AJE
             prat[3] = p3p2d = 1.0;
             prat[13] = p3fp2d = 1.0;
             byprat = 0.0;
-            a2d = a2 = acore = 1.753;
+            a2d = a2 = areaCore = 1.753;
             diameng = Math.Sqrt(4.0 * a2d / 3.14159);
-            afan = acore * (1.0 + byprat);
-            a4 = .323;
-            a4p = .818;
-            acap = .9 * a2;
+            areaFan = areaCore * (1.0 + byprat);
+            area4 = .323;
+            area4p = .818;
+            areaCap = .9 * a2;
             gamma = 1.4;
             gamopt = 1;
             pt2flag = 0;
@@ -411,14 +411,14 @@ namespace AJE
             eta[5] = 1.0;
             eta[7] = 1.0;
             eta[13] = 1.0;
-            a8 = a8d = 2.00;
-            a8max = 15f;
-            a8rat = 4.0;
+            area8 = area8d = 2.00;
+            area8max = 15f;
+            area8rat = 4.0;
             a7 = .50;
 
             u0max = 4500f;
             u0d = 2200.0;
-            arsched = 0;
+            areaRatioScheduler = 0;
 
             wtflag = 0; weight = 976f;
             minlt = 2; dinlt = 293f; tinlt = 4000;
@@ -468,7 +468,7 @@ namespace AJE
                       } */
 
             ts0 = FARts0 * 1.8;
-            ps0 = FARps0 * 14.696 * 146;
+            ps0 = FARps0 * 14.696 * 144;
 
 
             a0 = Math.Sqrt(gamma * rgas * ts0);             /*						 speed of sound ft/sec */
@@ -665,7 +665,7 @@ namespace AJE
             if (abflag > 0)
             {                   /*						 afterburner */
                 trat[7] = tt[7] / tt[6];
-                m5 = getMach(0, getAir(1.0, gam[5]) * a4 / acore, gam[5]);
+                m5 = getMach(0, getAir(1.0, gam[5]) * area4 / areaCore, gam[5]);
                 prat[7] = getRayleighLoss(m5, trat[7], tt[6]);
             }
             tt[7] = tt[6] * trat[7];
@@ -702,16 +702,16 @@ namespace AJE
             {
                 /*								 airflow determined at choked nozzle exit */
                 pt[8] = epr * prat[2] * pt[0];
-                eair = getAir(1.0, game) * 144f * a8 * pt[8] / 14.7 /
+                eair = getAir(1.0, game) * 144f * area8 * pt[8] / 14.7 /
                        Math.Sqrt(etr * tt[0] / 518f);
                 m2 = getMach(0, eair * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * acore * 144f), gamma);
+                    (prat[2] * pt[0] / 14.7 * areaCore * 144f), gamma);
                 npr = pt[8] / ps0;
                 uexit = Math.Sqrt(2.0 * rgas / fac1 * etr * tt[0] * eta[7] *
                     (1.0 - Math.Pow(1.0 / npr, fac1)));
                 if (npr <= 1.893) pexit = ps0;
                 else pexit = .52828 * pt[8];
-                fgros = (uexit + (pexit - ps0) * 144f * a8 / eair) / g0;
+                forceGross = (uexit + (pexit - ps0) * 144f * area8 / eair) / g0;
             }
 
             // turbo fan -- added terms for fan flow
@@ -722,62 +722,62 @@ namespace AJE
                 ues = Math.Sqrt(2.0 * rgas / fac1 * tt[13] * eta[7] *
                     (1.0 - Math.Pow(1.0 / snpr, fac1)));
                 m2 = getMach(0, eair * (1.0 + byprat) * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * afan * 144f), gamma);
+                    (prat[2] * pt[0] / 14.7 * areaFan * 144f), gamma);
                 if (snpr <= 1.893) pfexit = ps0;
                 else pfexit = .52828 * pt[13];
-                fgros = fgros + (byprat * ues + (pfexit - ps0) * 144f * byprat * acore / eair) / g0;
+                forceGross = forceGross + (byprat * ues + (pfexit - ps0) * 144f * byprat * areaCore / eair) / g0;
             }
 
             // ramjets
             if (entype == 3)
             {
                 /*								 airflow determined at nozzle throat */
-                eair = getAir(1.0, game) * 144.0 * a2 * arthd * epr * prat[2] * pt[0] / 14.7 /
+                eair = getAir(1.0, game) * 144.0 * a2 * areaRamThroatd * epr * prat[2] * pt[0] / 14.7 /
                        Math.Sqrt(etr * tt[0] / 518f);
                 m2 = getMach(0, eair * Math.Sqrt(tt[0] / 518f) /
-                    (prat[2] * pt[0] / 14.7 * acore * 144f), gamma);
-                mexit = getMach(2, (getAir(1.0, game) / arexitd), game);
-                uexit = mexit * Math.Sqrt(game * rgas * etr * tt[0] * eta[7] /
-                    (1.0 + .5 * (game - 1.0) * mexit * mexit));
-                pexit = Math.Pow((1.0 + .5 * (game - 1.0) * mexit * mexit), (-game / (game - 1.0)))
+                    (prat[2] * pt[0] / 14.7 * areaCore * 144f), gamma);
+                machExit = getMach(2, (getAir(1.0, game) / areaRamExitd), game);
+                uexit = machExit * Math.Sqrt(game * rgas * etr * tt[0] * eta[7] /
+                    (1.0 + .5 * (game - 1.0) * machExit * machExit));
+                pexit = Math.Pow((1.0 + .5 * (game - 1.0) * machExit * machExit), (-game / (game - 1.0)))
                         * epr * prat[2] * pt[0];
-                fgros = (uexit + (pexit - ps0) * arexitd * arthd * a2 / eair / 144f) / g0;
+                forceGross = (uexit + (pexit - ps0) * areaRamExitd * areaRamThroatd * a2 / eair / 144f) / g0;
             }
 
             // ram drag
-            dram = u0 / g0;
-            if (entype == 2) dram = dram + u0 * byprat / g0;
+            dragRam = u0 / g0;
+            if (entype == 2) dragRam = dragRam + u0 * byprat / g0;
 
             // mass flow ratio 
             if (fsmach > .01) mfr = getAir(m2, gamma) * prat[2] / getAir(fsmach, gamma);
             else mfr = 5f;
 
             // net thrust
-            fnet = fgros - dram;
+            forceNet = forceGross - dragRam;
             if (entype == 3 && fsmach < .3)
             {
-                fnet = 0.0;
-                fgros = 0.0;
+                forceNet = 0.0;
+                forceGross = 0.0;
             }
 
             // thrust in pounds
-            fnlb = fnet * eair;
-            fglb = fgros * eair;
-            drlb = dram * eair;
+            forceNetlb = forceNet * eair;
+            forceGrosslb = forceGross * eair;
+            dragRamlb = dragRam * eair;
 
             //fuel-air ratio and sfc
             fa = (trat[4] - 1.0) / (eta[4] * fhv / (cp3 * tt[3]) - trat[4]) +
                  (trat[7] - 1.0) / (fhv / (cpe * tt[15]) - trat[7]);
-            if (fnet > 0.0)
+            if (forceNet > 0.0)
             {
-                sfc = 3600f * fa / fnet;
-                flflo = sfc * fnlb;
-                isp = (fnlb / flflo) * 3600f;
+                sfc = 3600f * fa / forceNet;
+                fuelFlowlb = sfc * forceNetlb;
+                isp = (forceNetlb / fuelFlowlb) * 3600f;
             }
             else
             {
-                fnlb = 0.0;
-                flflo = 0.0;
+                forceNetlb = 0.0;
+                fuelFlowlb = 0.0;
                 sfc = 0.0;
                 isp = 0.0;
             }
@@ -819,10 +819,10 @@ namespace AJE
             v[8] = rg1 * t8 / (ps0 * 144f);
             cp[0] = getCp(tt[0], gamopt);
 
-            fntot = numeng * fnlb;
-            fuelrat = numeng * flflo;
+            forceNetTotallb = numeng * forceNetlb;
+            fuelrat = numeng * fuelFlowlb;
             // weight  calculation
-            if (wtflag == 0)
+            /*if (wtflag == 0)
             {
                 if (entype == 0)
                 {
@@ -843,7 +843,7 @@ namespace AJE
                 {
                     weight = .1242 * acore * (dburner + dnozr * 6f + dinlt * 3f) * Math.Sqrt(acore / 1.753);
                 }
-            }
+            }*/
             // check for temp limits
             if (entype < 3)
             {
@@ -898,49 +898,49 @@ namespace AJE
         public void getGeo()
         {
             /*						 determine geometric variables */
-            double game;
+            double gammaExit;
 
             if (entype <= 2)
             {          // turbine engines
-                if (afan < acore) afan = acore;
-                a8max = .75 * Math.Sqrt(etr) / epr; /*								 limits compressor face  */
+                if (areaFan < areaCore) areaFan = areaCore;
+                area8max = .75 * Math.Sqrt(etr) / epr; /*								 limits compressor face  */
                 /*  mach number  to < .5   */
-                if (a8max > 1.0) a8max = 1.0;
-                if (a8rat > a8max)
+                if (area8max > 1.0) area8max = 1.0;
+                if (area8rat > area8max)
                 {
-                    a8rat = a8max;
+                    area8rat = area8max;
                 }
                 /*								    dumb down limit - a8 schedule */
-                if (arsched == 0)
+                if (areaRatioScheduler == 0)
                 {
-                    a8rat = a8max;
+                    area8rat = area8max;
                 }
-                a8 = a8rat * acore;
-                a8d = a8 * prat[7] / Math.Sqrt(trat[7]);
+                area8 = area8rat * areaCore;
+                area8d = area8 * prat[7] / Math.Sqrt(trat[7]);
                 /*								 assumes choked a8 and a4 */
-                a4 = a8 * prat[5] * prat[15] * prat[7] /
+                area4 = area8 * prat[5] * prat[15] * prat[7] /
                      Math.Sqrt(trat[7] * trat[5] * trat[15]);
-                a4p = a8 * prat[15] * prat[7] / Math.Sqrt(trat[7] * trat[15]);
-                acap = .9 * a2;
+                area4p = area8 * prat[15] * prat[7] / Math.Sqrt(trat[7] * trat[15]);
+                areaCap = .9 * a2;
             }
 
             if (entype == 3)
             {      // ramjets
-                game = getGamma(tt[4], gamopt);
-                if (athsched == 0)
+                gammaExit = getGamma(tt[4], gamopt);
+                if (areaThroatScheduler == 0)
                 {   // scheduled throat area
-                    arthd = getAir(fsmach, gamma) * Math.Sqrt(etr) /
-                            (getAir(1.0, game) * epr * prat[2]);
-                    if (arthd < arthmn) arthd = arthmn;
-                    if (arthd > arthmx) arthd = arthmx;
+                    areaRamThroatd = getAir(fsmach, gamma) * Math.Sqrt(etr) /
+                            (getAir(1.0, gammaExit) * epr * prat[2]);
+                    if (areaRamThroatd < areaRamThroatMin) areaRamThroatd = areaRamThroatMin;
+                    if (areaRamThroatd > areaRamThroatMax) areaRamThroatd = areaRamThroatMax;
                 }
-                if (aexsched == 0)
+                if (areaExitScheduler == 0)
                 {   // scheduled exit area
-                    mexit = Math.Sqrt((2.0 / (game - 1.0)) * ((1.0 + .5 * (gamma - 1.0) * fsmach * fsmach)
-                        * Math.Pow((epr * prat[2]), (game - 1.0) / game) - 1.0));
-                    arexitd = getAir(1.0, game) / getAir(mexit, game);
-                    if (arexitd < arexmn) arexitd = arexmn;
-                    if (arexitd > arexmx) arexitd = arexmx;
+                    machExit = Math.Sqrt((2.0 / (gammaExit - 1.0)) * ((1.0 + .5 * (gamma - 1.0) * fsmach * fsmach)
+                        * Math.Pow((epr * prat[2]), (gammaExit - 1.0) / gammaExit) - 1.0));
+                    areaRamExitd = getAir(1.0, gammaExit) / getAir(machExit, gammaExit);
+                    if (areaRamExitd < areaRamExitMin) areaRamExitd = areaRamExitMin;
+                    if (areaRamExitd > areaRamExitMax) areaRamExitd = areaRamExitMax;
                 }
             }
         }

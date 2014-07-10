@@ -155,10 +155,10 @@ namespace AJE
             {
                 if (acore != -1 && byprat != -1)
                 {
-                    aje.acore = acore;
+                    aje.areaCore = acore;
                     aje.byprat = byprat;
-                    aje.afan = acore * (1.0 + byprat);
-                    aje.a2d = aje.a2 = aje.afan;
+                    aje.areaFan = acore * (1.0 + byprat);
+                    aje.a2d = aje.a2 = aje.areaFan;
 
                 }
                 if (tt4 != -1)
@@ -245,7 +245,7 @@ namespace AJE
                 if (p.Modules.Contains("AJEModule"))
                 {
                     e = (AJEModule)p.Modules["AJEModule"];
-                    EngineArea += (float)(e.aje.acore * (1 + e.aje.byprat));
+                    EngineArea += (float)(e.aje.areaCore * (1 + e.aje.byprat));
                 }
                 if (p.Modules.Contains("AJEInlet"))
                 {
@@ -278,7 +278,7 @@ namespace AJE
             {
 
                 aje.comPute();
-                engine.SetThrust(((float)aje.fnlb) * 0.004448f);
+                engine.SetThrust(((float)aje.forceNetlb) * 0.004448f);
                 engine.SetIsp((float)aje.isp);
                 Mode = "Cruise " + System.Convert.ToString((int)(OverallThrottle * 100f)) + "%";
             }
@@ -289,7 +289,7 @@ namespace AJE
                     engine.useEngineResponseTime = true;
                     aje.abflag = 0;
                     aje.comPute();
-                    engine.SetThrust(((float)aje.fnlb) * 0.004448f / ABthreshold);
+                    engine.SetThrust(((float)aje.forceNetlb) * 0.004448f / ABthreshold);
                     engine.SetIsp((float)aje.isp);
                     Mode = "Cruise " + System.Convert.ToString((int)(OverallThrottle / ABthreshold * 100f)) + "%";
                 }
@@ -305,13 +305,13 @@ namespace AJE
                     aje.tt7 = (OverallThrottle - ABthreshold) * (ABmax - ABmin) / (1 - ABthreshold) + ABmin;
 
                     aje.comPute();
-                    engine.SetThrust(((float)aje.fnlb) * 0.004448f / OverallThrottle);
+                    engine.SetThrust(((float)aje.forceNetlb) * 0.004448f / OverallThrottle);
                     engine.SetIsp((float)aje.isp * ABIspMult);
                     Mode = "Afterburner " + System.Convert.ToString((int)((OverallThrottle - ABthreshold) / (1 - ABthreshold) * 100f)) + "%";
                 }
 
             }
-            Mode += " (" + (aje.fglb * 0.004448f).ToString("N2") + "kN gr)";
+            Mode += " (" + (aje.forceGrosslb * 0.004448f).ToString("N2") + "kN gr)";
 
 
 
