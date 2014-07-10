@@ -9,7 +9,6 @@ namespace AJE
     public class AJESolver
     {
         public double FARts0, FARps0;
-        double DEG2RAD = 3.14515926 / 180.0;
         public double precooled, ts00;
         public int abflag, entype, lunits, inflag, varflag, pt2flag, wtflag;
         public int abkeep, pltkeep, move;
@@ -467,8 +466,8 @@ namespace AJE
 
                       } */
 
-            ts0 = FARts0 * 1.8;
-            ps0 = FARps0 * 14.696 * 144;
+            ts0 = FARts0 * 1.8; // kelvin to rankine
+            ps0 = FARps0 * 14.696 * 144; // atm to psi to lb/sqft
 
 
             a0 = Math.Sqrt(gamma * rgas * ts0);             /*						 speed of sound ft/sec */
@@ -490,7 +489,10 @@ namespace AJE
             if (u0 > .0001) rho0 = q0 / (u0 * u0);
             else rho0 = 1.0;
 
-            tt[0] = ts0 * (1.0 + .5 * (gamma - 1.0) * fsmach * fsmach);
+            if (precooled != -1)
+                tt[0] = precooled;
+            else
+                tt[0] = ts0 * (1.0 + .5 * (gamma - 1.0) * fsmach * fsmach);
 
 
 
