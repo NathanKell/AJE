@@ -20,7 +20,7 @@ namespace AJE
         public double fsmach = 0, alt, ts0, ps0, q0, u0d, u0, a0, rho0, tsout, psout;
         public double epr, etr, npr, snpr, forceNet, forceGross, dragRam, sfc, fa, eair, uexit, ues;
         public double fnd, forceNetlb, forceGrosslb, dragRamlb, fuelFlowlb, fuelrat, forceNetTotallb, eteng;
-        public double arth, areaRamThroatd, arexit, areaRamExitd;
+        public double arth, areaRamThroatd, areaRamExit, areaRamExitd;
         public double machExit, pexit, pfexit;
         public double areaRamThroatMin, areaRamThroatMax, areaRamExitMin, areaRamExitMax;
         public double area8, area8rat, area8d, areaFan, a7, m2, isp;
@@ -175,7 +175,7 @@ namespace AJE
             areaRamThroatMin = 0.1; areaRamThroatMax = 1.5;
             areaRamExitMin = 1.0; areaRamExitMax = 10.0;
             areaRamThroatd = arth = .4;
-            arexit = areaRamExitd = 3.0;
+            areaRamExit = areaRamExitd = 3.0;
 
             u0min = 0.0; u0max = 1500f;
             altmin = 0.0; altmax = 60000f;
