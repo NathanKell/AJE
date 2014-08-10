@@ -37,8 +37,7 @@
       <HintPath>..\..\..\..\..\..\Games\KSP_win64\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="FerramAerospaceResearch, Version=0.13.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="FerramAerospaceResearch">
       <HintPath>..\..\..\..\..\..\Games\KSP_win64\GameData\FerramAerospaceResearch\Plugins\FerramAerospaceResearch.dll</HintPath>
       <Private>False</Private>
     </Reference>
