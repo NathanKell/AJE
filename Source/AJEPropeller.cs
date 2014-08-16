@@ -18,20 +18,8 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float idle = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float r0;
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "v0", guiFormat = "000"), UI_FloatRange(minValue = 300f, maxValue = 1600f, stepIncrement = 5f)]
-        public float v0;
-        [KSPField(isPersistant = false, guiActive = false)]
         public float omega0;
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "rho0", guiFormat = "0.###"), UI_FloatRange(minValue = 0.26f, maxValue = 1.26f, stepIncrement = 0.005f)]
-        public float rho0;
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "power0", guiFormat = "000"), UI_FloatRange(minValue = 300.00f, maxValue = 4000.0f, stepIncrement = 10f)]
-        public float power0;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float fine;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float coarse;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop RPM")]
         public float omega;
         [KSPField(isPersistant = false, guiActive = false)]
         public float power;
@@ -87,9 +75,11 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust (kN)")]
         public float netExhaustThrust = 0.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float boost = 1.0f;
-        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "RPM Lever", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
+        public float RPM = 1.0f;
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
         public float mixture = 0.836481f; // optimal "auto rich"
         // ignore RPM for now
 
@@ -117,7 +107,6 @@ namespace AJE
         //[KSPField(isPersistant = false, guiActive = true)]
         //public string velocityvector;
 
-        public AJEPropellerSolver propeller;
         public AJEPropJSB propJSB = null;
         public PistonEngine pistonengine;
 
@@ -155,20 +144,30 @@ namespace AJE
             pistonengine._ramAir = ramAir;
 
             pistonengine.ComputeVEMultiplier(); // given newly-set stats
+
+            if (!propJSB.IsSane()) // get prop from prefab if necessary
+                FixProp();
+        }
+
+        void FixProp() // get prop from prefab
+        {
+            if(part.partInfo != null && part.partInfo.partPrefab.Modules.Contains("AJEPropeller"))
+            {
+                AJEPropeller prefab = (AJEPropeller)part.partInfo.partPrefab.Modules["AJEPropeller"];
+                propJSB = new AJEPropJSB(prefab.propJSB);
+            }
         }
 
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            if (node.HasNode("PROPELLER"))
-            {
-                if (propJSB == null)
-                    propJSB = new AJEPropJSB(node.GetNode("PROPELLER"));
-                else
-                    propJSB.OnLoad(node.GetNode("PROPELLER"));
-            }
-            else if (propJSB == null)
-                propJSB = new AJEPropJSB();
+            if (propJSB == null)
+                propJSB = new AJEPropJSB(node);
+            else
+                propJSB.Load(node);
+
+            if (!propJSB.IsSane()) // get prop from prefab if necessary
+                FixProp();
         }
 
 
@@ -194,29 +193,30 @@ namespace AJE
             temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
 
             pistonengine.calc((float)pressure, temperature, omega * PistonEngine.RPM2RADPS / gearratio);
-            double shaftHP = pistonengine._power / PistonEngine.HP2W;
-            thrust = (float)propJSB.Calculate(shaftHP, density, v, speedOfSound);
-            //FIXME for now, ignore RPM found by propeller
-
             if (!useOxygen)
             {
                 pistonengine._power = power * PistonEngine.HP2W;
-                pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
+                //pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
             }
+            double shaftHP = pistonengine._power / PistonEngine.HP2W;
 
+            propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
+            propJSB.SetAdvance(RPM);
+            thrust = (float)propJSB.Calculate(shaftHP, density, v, speedOfSound);
+            omega = (float)propJSB.GetRPM();
             ShaftPower = ((int)Math.Round(shaftHP)).ToString() + "HP";
             manifoldPressure = pistonengine._mp / INHG2PA;
             fuelFlow = pistonengine._fuelFlow;
             chargeAirTemp = pistonengine._chargeTemp - 273.15f;
 
-            
 
-            
+
+            //isp = thrust * 1000f / 9.80665f / BSFC / pistonengine._power;
+            isp = thrust / 9.80665f / fuelFlow * 1000;
             // exhaust thrust, normalized for 2200HP and 180m/s = 200lbs thrust
-            netExhaustThrust = exhaustThrust * pistonengine._power / 2200f / 745.7f * 0.89f * (0.5f + v / 360f);
+            netExhaustThrust = exhaustThrust * pistonengine._power / 2200f / PistonEngine.HP2W * 0.89f * (0.5f + v / 360f);
             thrust += netExhaustThrust;
             engine.SetThrust(thrust);
-            isp = propeller._thrustOut / 9.80665f / BSFC / pistonengine._power;
             engine.SetIsp(isp);
 
             //Vector3d v1 = part.FindModelTransform("thrustTransform").forward;
@@ -225,7 +225,6 @@ namespace AJE
             //v2 = vessel.ReferenceTransform.InverseTransformDirection(v2);
             //thrustvector = ((int)v1.x).ToString() + " " + ((int)v1.y).ToString() + " " + ((int)v1.z).ToString() + " " + ((int)v1.magnitude).ToString();
             //velocityvector = ((int)v2.x).ToString() + " " + ((int)v2.y).ToString() + " " + ((int)v2.z).ToString() + " " + ((int)v2.magnitude).ToString();
-
         }
 
 
@@ -642,33 +641,63 @@ namespace AJE
     }
 
     // largely a port of JSBSim's FGTable
-    public class FGTable
+    [Serializable]
+    public class FGTable : IConfigNode
     {
         double[,] Data;
         public uint nRows, nCols;
-        uint lastRowIndex = 0;
-        uint lastColumnIndex = 0;
+        uint lastRowIndex = 2;
+        uint lastColumnIndex = 2;
+
+        public FGTable(FGTable t)
+        {
+            Data = t.Data;
+            nRows = t.nRows;
+            nCols = t.nCols;
+            lastRowIndex = t.lastRowIndex;
+            lastColumnIndex = t.lastColumnIndex;
+        }
         public FGTable(ConfigNode node)
         {
-            nRows = (uint)node.values.Count;
-            string[] tmp1 = node.values[0].value.Split(null);
-            nCols = (uint)tmp1.Length; // first row has no first column
-            if (node.values.Count > 1)
+            Load(node);
+        }
+        public void Load(ConfigNode node)
+        {
+            Debug.Log("*FGTable: Constructing table from node " + node.name);
+            nRows = (uint)node.values.Count-1;
+            string[] tmp = node.values[0].value.Split(null);
+            nCols = (uint)tmp.Length;
+            
+            Data = new double[nRows + 1, nCols + 1];
+            for (int i = 0; i <= nRows; i++)
             {
-                string[] tmp2 = node.values[1].value.Split(null);
-                if (tmp2.Length > nCols)
-                    nCols = (uint)tmp2.Length;
-            }
-            Data = new double[nRows, nCols];
-            for (int i = 0; i < nRows; i++)
-            {
-                string[] curRow = node.values[i].value.Split(null);
+                string[] curRow = node.values[i].value.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                string tmpstr = "Data for row " + i + ": ";
                 for (int j = 0; j < curRow.Length; j++)
                 {
-                    double dtmp;
+                    double dtmp = -999;
+                    int offset = 0;
+                    if (i == 0)
+                        offset = 1;
                     if (double.TryParse(curRow[j], out dtmp))
-                        Data[i, j] = dtmp;
+                        Data[i, j+offset] = dtmp;
+                    tmpstr += dtmp + ", ";
                 }
+                Debug.Log(tmpstr + "endrow.");
+            }
+            Debug.Log("*FGTable: Constructed table of " + nCols + "," + nRows + " (plus key row and col).");
+        }
+        public void Save(ConfigNode node)
+        {
+            for (uint i = 0; i <= nRows; i++)
+            {
+                string curRow = "";
+                uint max = nCols;
+                if (i == 0)
+                    max--;
+                for (uint j = 0; j < max; j++)
+                    curRow += Data[i,j] + " ";
+                node.AddValue("key", curRow);
             }
         }
         public double GetValue(double rowKey, double colKey)
@@ -751,15 +780,16 @@ namespace AJE
     }
 
     // taken from JSBSim
-    public class AJEPropJSB
+    [Serializable]
+    public class AJEPropJSB : IConfigNode
     {
         // FGThruster members
         double Thrust;
         double PowerRequired;
-        double deltaT;
+        public double deltaT;
         double GearRatio;
         double ThrustCoeff;
-        double ReverserAngle;
+        //double ReverserAngle;
 
         //Vector3 ActingLocation;
 
@@ -804,13 +834,9 @@ namespace AJE
         const double MSECTOFTSEC = 1 / 0.3048;
         const double MTOFT = 0.3048;
 
-        /** Constructor for FGPropeller.
-            @param exec a pointer to the main executive object
-            @param el a pointer to the thruster config file XML element
-            @param num the number of this propeller */
         public AJEPropJSB(ConfigNode node = null)
         {
-            MaxPitch = MinPitch = P_Factor = Pitch = Advance = MinRPM = MaxRPM = 0.0;
+            MaxPitch = MinPitch = P_Factor = Pitch = Advance = MinRPM = MaxRPM = deltaT = 0.0;
             Sense = 1; // default clockwise rotation
             ReversePitch = 0.0;
             Reversed = false;
@@ -818,7 +844,7 @@ namespace AJE
             Reverse_coef = 0.0;
             GearRatio = 1.0;
             CtFactor = CpFactor = 1.0;
-            ConstantSpeed = 0;
+            ConstantSpeed = 1; // assume constant speed unless told otherwise
             cThrust = null;
             cThrustFP = null;
             cPower = null;
@@ -831,11 +857,63 @@ namespace AJE
             RPM = 0;
 
             if (node != null)
-                OnLoad(node);
+                Load(node);
             CalcDefaults();
         }
-        public void OnLoad(ConfigNode node)
+        public AJEPropJSB(AJEPropJSB t)
         {
+            deltaT = t.deltaT;
+            GearRatio = t.GearRatio;
+            numBlades = t.numBlades;
+            J = t.J;
+            RPM = t.RPM;
+            Ixx = t.Ixx;
+            Diameter = t.Diameter;
+            MaxPitch = t.MaxPitch;
+            MinPitch = t.MinPitch;
+            MinRPM = t.MinRPM;
+            MaxRPM = t.MaxRPM;
+            Pitch = t.Pitch;
+            P_Factor =t.P_Factor;
+            Sense = t.Sense;
+            Advance = t.Advance;
+            ExcessTorque = t.ExcessTorque;
+            D4 = t.D4;
+            D5 = t.D5;
+            HelicalTipMach = t.HelicalTipMach;
+            Vinduced = t.Vinduced;
+            vTorque = t.vTorque;
+            if (t.cThrust != null)
+                cThrust = new FGTable(t.cThrust);
+            else
+                cThrustFP = t.cThrustFP;
+            if (t.cPower != null)
+                cPower = new FGTable(t.cPower);
+            else
+                cPowerFP = t.cPowerFP;
+
+            CtMach = t.CtMach;
+            CpMach = t.CpMach;
+            CtFactor = t.CtFactor;
+            CpFactor = t.CpFactor;
+            ConstantSpeed = t.ConstantSpeed;
+            ReversePitch = t.ReversePitch;
+            Reversed = t.Reversed;
+            Reverse_coef = t.Reverse_coef;
+            Feathered = t.Feathered;
+        }
+        public void Load(ConfigNode node)
+        {
+            if (node.HasValue("omega0"))
+                MinRPM = double.Parse(node.GetValue("omega0"));
+            if (node.HasValue("omega"))
+                MaxRPM = double.Parse(node.GetValue("omega"));
+            if (node.HasValue("gearratio"))
+                GearRatio = 1 / double.Parse(node.GetValue("gearratio"));
+
+            if (node.HasNode("PROPELLER"))
+                node = node.GetNode("PROPELLER");
+
             if (node.HasValue("ixx"))
                 Ixx = double.Parse(node.GetValue("ixx"));
             if (node.HasValue("diameter"))
@@ -897,6 +975,10 @@ namespace AJE
 
             CalcDefaults();
         }
+        public void Save(ConfigNode node)
+        {
+            
+        }
 
         void CalcDefaults()
         {
@@ -904,6 +986,14 @@ namespace AJE
             D4 = Diameter * Diameter * Diameter * Diameter;
             D5 = D4 * Diameter;
             Pitch = MinPitch;
+        }
+
+        /** Checks if the object is sane (because KSP serialization is poor) */
+        public bool IsSane()
+        {
+            if (MinPitch == MaxPitch && MaxPitch == 0)
+                return false;
+            return true;
         }
 
         /** Sets the Revolutions Per Minute for the propeller. Normally the propeller
@@ -1011,81 +1101,99 @@ namespace AJE
             velocity, air density,  and rotational rate. */
         public double GetPowerRequired(double rho, double Vel)
         {
-            double cPReq, J;
-            double RPS = RPM / 60.0;
-
-            if (RPS != 0.0) J = Vel / (Diameter * RPS);
-            else            J = Vel / Diameter;
-
-            if (MaxPitch == MinPitch)   // Fixed pitch prop
+            string pos = "start";
+            try
             {
-                cPReq = cPowerFP.Evaluate((float)J);
+                double cPReq, J;
+                double RPS = RPM / 60.0;
 
-            }
-            else
-            {                      // Variable pitch prop
-                if (ConstantSpeed != 0)   // Constant Speed Mode
+                if (RPS != 0.0)
+                    J = Vel / (Diameter * RPS);
+                else
+                    J = Vel / Diameter;
+
+                if (MaxPitch == MinPitch)   // Fixed pitch prop
                 {
-
-                    // do normal calculation when propeller is neither feathered nor reversed
-                    // Note:  This method of feathering and reversing was added to support the
-                    //        turboprop model.  It's left here for backward compatablity, but
-                    //        now feathering and reversing should be done in Manual Pitch Mode.
-                    if (!Feathered)
+                    pos = "Fixed pitch";
+                    cPReq = cPowerFP.Evaluate((float)J);
+                }
+                else
+                {                      // Variable pitch prop
+                    if (ConstantSpeed != 0)   // Constant Speed Mode
                     {
-                        if (!Reversed)
-                        {
-                            double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
-                            double dRPM = rpmReq - RPM;
-                            // The pitch of a variable propeller cannot be changed when the RPMs are
-                            // too low - the oil pump does not work.
-                            if (RPM > 200) Pitch -= dRPM * deltaT;
-                            if (Pitch < MinPitch)       Pitch = MinPitch;
-                            else if (Pitch > MaxPitch)  Pitch = MaxPitch;
 
-                        }
-                        else // Reversed propeller
+                        // do normal calculation when propeller is neither feathered nor reversed
+                        // Note:  This method of feathering and reversing was added to support the
+                        //        turboprop model.  It's left here for backward compatablity, but
+                        //        now feathering and reversing should be done in Manual Pitch Mode.
+                        if (!Feathered)
                         {
-
-                            // when reversed calculate propeller pitch depending on throttle lever position
-                            // (beta range for taxing full reverse for braking)
-                            double PitchReq = MinPitch - ( MinPitch - ReversePitch ) * Reverse_coef;
-                            // The pitch of a variable propeller cannot be changed when the RPMs are
-                            // too low - the oil pump does not work.
-                            if (RPM > 200) Pitch += (PitchReq - Pitch) / 200;
-                            if (RPM > MaxRPM)
+                            if (!Reversed)
                             {
-                                Pitch += (MaxRPM - RPM) / 50;
-                                if (Pitch < ReversePitch) Pitch = ReversePitch;
-                                else if (Pitch > MaxPitch)  Pitch = MaxPitch;
+                                pos = "CS";
+                                double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
+                                double dRPM = rpmReq - RPM;
+                                // The pitch of a variable propeller cannot be changed when the RPMs are
+                                // too low - the oil pump does not work.
+                                if (RPM > 200) Pitch -= dRPM * deltaT;
+                                if (Pitch < MinPitch) Pitch = MinPitch;
+                                else if (Pitch > MaxPitch) Pitch = MaxPitch;
+
                             }
+                            else // Reversed propeller
+                            {
+                                pos = "CS reversed";
+                                // when reversed calculate propeller pitch depending on throttle lever position
+                                // (beta range for taxing full reverse for braking)
+                                double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
+                                // The pitch of a variable propeller cannot be changed when the RPMs are
+                                // too low - the oil pump does not work.
+                                if (RPM > 200) Pitch += (PitchReq - Pitch) / 200;
+                                if (RPM > MaxRPM)
+                                {
+                                    Pitch += (MaxRPM - RPM) / 50;
+                                    if (Pitch < ReversePitch) Pitch = ReversePitch;
+                                    else if (Pitch > MaxPitch) Pitch = MaxPitch;
+                                }
+                            }
+
                         }
-
+                        else  // Feathered propeller
+                        {
+                            pos = "Feathered";
+                            // ToDo: Make feathered and reverse settings done via FGKinemat
+                            Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
+                            if (Pitch > MaxPitch)
+                                Pitch = MaxPitch;
+                        }
                     }
-                    else  // Feathered propeller
+                    else // Manual Pitch Mode, pitch is controlled externally
                     {
-                     // ToDo: Make feathered and reverse settings done via FGKinemat
-                        Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
                     }
+                    pos = "CS/Var done";
+                    cPReq = cPower.GetValue(J, Pitch);
                 }
-                else // Manual Pitch Mode, pitch is controlled externally
-                {
-                }
-                cPReq = cPower.GetValue(J, Pitch);
+
+                // Apply optional scaling factor to Cp (default value = 1)
+                cPReq *= CpFactor;
+
+                // Apply optional Mach effects from CP_MACH table
+                pos = "CpMach";
+                if (CpMach != null)
+                    cPReq *= CpMach.Evaluate((float)HelicalTipMach);
+
+                double local_RPS = RPS < 0.01 ? 0.01 : RPS;
+
+                PowerRequired = cPReq * local_RPS * RPS * local_RPS * D5 * rho;
+                vTorque.x = (-Sense * PowerRequired / (local_RPS * 2.0 * Math.PI));
+
+                return PowerRequired;
             }
-
-            // Apply optional scaling factor to Cp (default value = 1)
-            cPReq *= CpFactor;
-
-            // Apply optional Mach effects from CP_MACH table
-            if (CpMach != null) cPReq *= CpMach.Evaluate((float)HelicalTipMach);
-
-            double local_RPS = RPS < 0.01 ? 0.01 : RPS; 
-
-            PowerRequired = cPReq*local_RPS*RPS*local_RPS*D5*rho;
-            vTorque.x = (-Sense*PowerRequired / (local_RPS*2.0*Math.PI));
-
-            return PowerRequired;
+            catch (Exception e)
+            {
+                Debug.Log("*AJEPropJSB: GetPowerReq: Exception at " + pos + ": " + e.Message);
+                return 100;
+            }
         }
 
         /** Calculates and returns the thrust produced by this propeller.
@@ -1198,166 +1306,4 @@ namespace AJE
             return Thrust * LBTOKN; // return thrust in kilonewtons
         }
     }
-
-
-    public class AJEPropellerSolver
-    {
-
-        public float _r;           // characteristic radius
-        public float _j0;          // zero-thrust advance ratio
-        public float _baseJ0;      //  ... uncorrected for prop advance
-        public float _f0;          // thrust coefficient
-        public float _etaC;        // Peak efficiency
-        public float _lambdaPeak;  // constant, ~0.759835;
-        public float _beta;        // constant, ~1.48058;
-        public float _tc0;         // thrust "coefficient" at takeoff
-        public float _fine_stop;   // ratio for minimum pitch (high RPM)
-        public float _coarse_stop; // ratio for maximum pitch (low RPM)
-        public bool _matchTakeoff; // Does _tc0 mean anything?
-        public bool _manual;      // manual pitch mode
-        public float _proppitch;   // prop pitch control setting (0 ~ 1.0)
-        public float _propfeather; // prop feather control setting (0 = norm, 1 = feather)
-
-        public float _density;
-
-        public float _thrustOut;
-        public float _torqueOut;
-        public bool _autopitch;
-        public float _v0;
-
-
-        public AJEPropellerSolver(float radius, float v, float omega, float rho, float power)
-        {
-            // Initialize numeric constants:
-            _lambdaPeak = Mathf.Pow(1f / 9f, 1f / 8f);
-            _beta = 1.0f / (_lambdaPeak - Mathf.Pow(_lambdaPeak, 9f));
-
-            _r = radius;
-            _etaC = 0.85f; // make this settable?
-            _v0 = v;
-            _j0 = v / (omega * _lambdaPeak);
-            _baseJ0 = _j0;
-
-            float V2 = v * v + (_r * omega) * (_r * omega);
-            _f0 = 2 * _etaC * power / (rho * v * V2);
-
-            _matchTakeoff = false;
-            _manual = false;
-            _proppitch = 0;
-        }
-
-        public void setTakeoff(float omega0, float power0)
-        {
-            // Takeoff thrust coefficient at lambda==0
-            _matchTakeoff = true;
-            float V2 = _r * omega0 * _r * omega0;
-            float gamma = _etaC * _beta / _j0;
-            float torque = power0 / omega0;
-
-            _tc0 = (torque * gamma) / (0.5f * _density * V2 * _f0);
-        }
-
-        public void setStops(float fine_stop, float coarse_stop)
-        {
-            _fine_stop = fine_stop;
-            _coarse_stop = coarse_stop;
-        }
-
-        public void modPitch(float mod)
-        {
-            _j0 *= mod;
-            if (_j0 < _fine_stop * _baseJ0) _j0 = _fine_stop * _baseJ0;
-            if (_j0 > _coarse_stop * _baseJ0) _j0 = _coarse_stop * _baseJ0;
-        }
-
-        public void setManualPitch()
-        {
-            _manual = true;
-        }
-
-        public void setPropPitch(float proppitch)
-        {
-            // makes only positive range of axis effective.
-            if (proppitch < 0)
-            {
-                _proppitch = 0;
-                return;
-            }
-            if (proppitch > 1)
-            {
-                _proppitch = 1;
-                return;
-            }
-            _proppitch = proppitch;
-
-        }
-
-        public void setPropFeather(int state)
-        {
-            // 0 = normal, 1 = feathered
-            if (state == 0)
-            {
-                _propfeather = 0;
-            }
-            else
-            {
-                _propfeather = 1;
-            }
-        }
-
-        public void calc(float density, float v, float omega)
-        {
-            // For manual pitch, exponentially modulate the J0 value between
-            // 0.25 and 4.  A prop pitch of 0.5 results in no change from the
-            // base value.
-            // TODO: integrate with _fine_stop and _coarse_stop variables
-            if (_manual)
-                _j0 = _baseJ0 * Mathf.Pow(2f, 2 - 4 * _proppitch);
-
-            float tipspd = _r * omega;
-            float V2 = v * v + tipspd * tipspd;
-
-            // Sanify
-            if (v < 0) v = 0;
-            if (omega < 0.001f) omega = 0.001f;
-
-            float J = v / omega;    // Advance ratio
-
-
-            float lambda = J / _j0; // Unitless scalar advance ratio
-
-            // There's an undefined point at lambda == 1.
-            if (lambda == 1.0f) lambda = 0.9999f;
-
-            float l4 = lambda * lambda; l4 = l4 * l4;   // lambda^4
-            float gamma = (_etaC * _beta / _j0) * (1 - l4); // thrust/torque ratio
-
-            // Compute a thrust coefficient, with clamping at very low
-            // lambdas (fast propeller / slow aircraft).
-            float tc = (1 - lambda) / (1 - _lambdaPeak);
-            if (_matchTakeoff && tc > _tc0) tc = _tc0;
-
-            float thrust = 0.5f * density * V2 * _f0 * tc;
-            float torque = thrust / gamma;
-            if (lambda > 1)
-            {
-                // This is the negative thrust / windmilling regime.  Throw
-                // out the efficiency graph approach and instead simply
-                // extrapolate the existing linear thrust coefficient and a
-                // torque coefficient that crosses the axis at a preset
-                // windmilling speed.  The tau0 value is an analytically
-                // calculated (i.e. don't mess with it) value for a torque
-                // coefficient at lamda==1.
-                float tau0 = (0.25f * _j0) / (_etaC * _beta * (1 - _lambdaPeak));
-                float lambdaWM = 1.2f; // lambda of zero torque (windmilling)
-                torque = tau0 - tau0 * (lambda - 1) / (lambdaWM - 1);
-                torque *= 0.5f * density * V2 * _f0;
-            }
-
-            _thrustOut = thrust;
-            _torqueOut = torque;
-        }
-
-    }
-
 }
