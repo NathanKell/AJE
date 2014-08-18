@@ -75,6 +75,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust (kN)")]
         public float netExhaustThrust = 0.0f;
 
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Pitch")]
+        public float propPitch = 0.0f;
+
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float boost = 1.0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "RPM Lever", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
@@ -208,7 +211,7 @@ namespace AJE
             manifoldPressure = pistonengine._mp / INHG2PA;
             fuelFlow = pistonengine._fuelFlow;
             chargeAirTemp = pistonengine._chargeTemp - 273.15f;
-
+            propPitch = (float)propJSB.GetPitch();
 
 
             //isp = thrust * 1000f / 9.80665f / BSFC / pistonengine._power;
@@ -1102,98 +1105,90 @@ namespace AJE
         public double GetPowerRequired(double rho, double Vel)
         {
             string pos = "start";
-            try
+            double cPReq, J;
+            double RPS = RPM / 60.0;
+
+            if (RPS != 0.0)
+                J = Vel / (Diameter * RPS);
+            else
+                J = Vel / Diameter;
+
+            if (MaxPitch == MinPitch)   // Fixed pitch prop
             {
-                double cPReq, J;
-                double RPS = RPM / 60.0;
-
-                if (RPS != 0.0)
-                    J = Vel / (Diameter * RPS);
-                else
-                    J = Vel / Diameter;
-
-                if (MaxPitch == MinPitch)   // Fixed pitch prop
+                pos = "Fixed pitch";
+                cPReq = cPowerFP.Evaluate((float)J);
+            }
+            else
+            {                      // Variable pitch prop
+                if (ConstantSpeed != 0)   // Constant Speed Mode
                 {
-                    pos = "Fixed pitch";
-                    cPReq = cPowerFP.Evaluate((float)J);
-                }
-                else
-                {                      // Variable pitch prop
-                    if (ConstantSpeed != 0)   // Constant Speed Mode
-                    {
 
-                        // do normal calculation when propeller is neither feathered nor reversed
-                        // Note:  This method of feathering and reversing was added to support the
-                        //        turboprop model.  It's left here for backward compatablity, but
-                        //        now feathering and reversing should be done in Manual Pitch Mode.
-                        if (!Feathered)
+                    // do normal calculation when propeller is neither feathered nor reversed
+                    // Note:  This method of feathering and reversing was added to support the
+                    //        turboprop model.  It's left here for backward compatablity, but
+                    //        now feathering and reversing should be done in Manual Pitch Mode.
+                    if (!Feathered)
+                    {
+                        if (!Reversed)
                         {
-                            if (!Reversed)
+                            pos = "CS";
+                            double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
+                            double dRPM = rpmReq - RPM;
+                            // The pitch of a variable propeller cannot be changed when the RPMs are
+                            // too low - the oil pump does not work.
+                            if (RPM > 200) Pitch -= dRPM * deltaT;
+                            if (Pitch < MinPitch) Pitch = MinPitch;
+                            else if (Pitch > MaxPitch) Pitch = MaxPitch;
+
+                        }
+                        else // Reversed propeller
+                        {
+                            pos = "CS reversed";
+                            // when reversed calculate propeller pitch depending on throttle lever position
+                            // (beta range for taxing full reverse for braking)
+                            double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
+                            // The pitch of a variable propeller cannot be changed when the RPMs are
+                            // too low - the oil pump does not work.
+                            if (RPM > 200) Pitch += (PitchReq - Pitch) / 200;
+                            if (RPM > MaxRPM)
                             {
-                                pos = "CS";
-                                double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
-                                double dRPM = rpmReq - RPM;
-                                // The pitch of a variable propeller cannot be changed when the RPMs are
-                                // too low - the oil pump does not work.
-                                if (RPM > 200) Pitch -= dRPM * deltaT;
-                                if (Pitch < MinPitch) Pitch = MinPitch;
+                                Pitch += (MaxRPM - RPM) / 50;
+                                if (Pitch < ReversePitch) Pitch = ReversePitch;
                                 else if (Pitch > MaxPitch) Pitch = MaxPitch;
-
                             }
-                            else // Reversed propeller
-                            {
-                                pos = "CS reversed";
-                                // when reversed calculate propeller pitch depending on throttle lever position
-                                // (beta range for taxing full reverse for braking)
-                                double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
-                                // The pitch of a variable propeller cannot be changed when the RPMs are
-                                // too low - the oil pump does not work.
-                                if (RPM > 200) Pitch += (PitchReq - Pitch) / 200;
-                                if (RPM > MaxRPM)
-                                {
-                                    Pitch += (MaxRPM - RPM) / 50;
-                                    if (Pitch < ReversePitch) Pitch = ReversePitch;
-                                    else if (Pitch > MaxPitch) Pitch = MaxPitch;
-                                }
-                            }
+                        }
 
-                        }
-                        else  // Feathered propeller
-                        {
-                            pos = "Feathered";
-                            // ToDo: Make feathered and reverse settings done via FGKinemat
-                            Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
-                            if (Pitch > MaxPitch)
-                                Pitch = MaxPitch;
-                        }
                     }
-                    else // Manual Pitch Mode, pitch is controlled externally
+                    else  // Feathered propeller
                     {
+                        pos = "Feathered";
+                        // ToDo: Make feathered and reverse settings done via FGKinemat
+                        Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
+                        if (Pitch > MaxPitch)
+                            Pitch = MaxPitch;
                     }
-                    pos = "CS/Var done";
-                    cPReq = cPower.GetValue(J, Pitch);
                 }
-
-                // Apply optional scaling factor to Cp (default value = 1)
-                cPReq *= CpFactor;
-
-                // Apply optional Mach effects from CP_MACH table
-                pos = "CpMach";
-                if (CpMach != null)
-                    cPReq *= CpMach.Evaluate((float)HelicalTipMach);
-
-                double local_RPS = RPS < 0.01 ? 0.01 : RPS;
-
-                PowerRequired = cPReq * local_RPS * RPS * local_RPS * D5 * rho;
-                vTorque.x = (-Sense * PowerRequired / (local_RPS * 2.0 * Math.PI));
-
-                return PowerRequired;
+                else // Manual Pitch Mode, pitch is controlled externally
+                {
+                }
+                pos = "CS/Var done";
+                cPReq = cPower.GetValue(J, Pitch);
             }
-            catch (Exception e)
-            {
-                Debug.Log("*AJEPropJSB: GetPowerReq: Exception at " + pos + ": " + e.Message);
-                return 100;
-            }
+
+            // Apply optional scaling factor to Cp (default value = 1)
+            cPReq *= CpFactor;
+
+            // Apply optional Mach effects from CP_MACH table
+            pos = "CpMach";
+            if (CpMach != null)
+                cPReq *= CpMach.Evaluate((float)HelicalTipMach);
+
+            double local_RPS = RPS < 0.01 ? 0.01 : RPS;
+
+            PowerRequired = cPReq * local_RPS * RPS * local_RPS * D5 * rho;
+            vTorque.x = (-Sense * PowerRequired / (local_RPS * 2.0 * Math.PI));
+
+            return PowerRequired;
         }
 
         /** Calculates and returns the thrust produced by this propeller.
