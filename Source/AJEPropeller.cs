@@ -86,6 +86,12 @@ namespace AJE
         public float mixture = 0.836481f; // optimal "auto rich"
         // ignore RPM for now
 
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        public float CpTweak = 1.0f;
+
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CtTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        public float CtTweak = 1.0f;
+
         //[KSPField(isPersistant = false, guiActive = true)]
         public double density = 1.225f;
         //[KSPField(isPersistant = false, guiActive = true)]
@@ -97,7 +103,7 @@ namespace AJE
         //[KSPField(isPersistant = false, guiActive = true)]
         public float v;
         
-        //[KSPField(isPersistant = false, guiActive = true)]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Thrust")]
         public float thrust;
         //[KSPField(isPersistant = false, guiActive = true)]
         public float isp;
@@ -172,6 +178,12 @@ namespace AJE
             if (!propJSB.IsSane()) // get prop from prefab if necessary
                 FixProp();
         }
+        public override void OnSave(ConfigNode node)
+        {
+            base.OnSave(node);
+            if (propJSB != null)
+                propJSB.Save(node);
+        }
 
 
         public void FixedUpdate()
@@ -195,16 +207,18 @@ namespace AJE
             pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f + 0.5f * density * v * v * ramAir; // include dynamic pressure
             temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
 
-            pistonengine.calc((float)pressure, temperature, omega * PistonEngine.RPM2RADPS / gearratio);
+            pistonengine.calc((float)pressure, temperature, omega * PistonEngine.RPM2RADPS / gearratio, vessel.ctrlState.mainThrottle);
             if (!useOxygen)
             {
-                pistonengine._power = power * PistonEngine.HP2W;
+                pistonengine._power = power * PistonEngine.HP2W * vessel.ctrlState.mainThrottle;
                 //pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
             }
             double shaftHP = pistonengine._power / PistonEngine.HP2W;
 
             propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
             propJSB.SetAdvance(RPM);
+            propJSB.SetCpFactor((double)CpTweak);
+            propJSB.SetCtFactor((double)CtTweak);
             thrust = (float)propJSB.Calculate(shaftHP, density, v, speedOfSound);
             omega = (float)propJSB.GetRPM();
             ShaftPower = ((int)Math.Round(shaftHP)).ToString() + "HP";
@@ -214,12 +228,25 @@ namespace AJE
             propPitch = (float)propJSB.GetPitch();
 
 
-            //isp = thrust * 1000f / 9.80665f / BSFC / pistonengine._power;
-            isp = thrust / 9.80665f / fuelFlow * 1000;
-            // exhaust thrust, normalized for 2200HP and 180m/s = 200lbs thrust
-            netExhaustThrust = exhaustThrust * pistonengine._power / 2200f / PistonEngine.HP2W * 0.89f * (0.5f + v / 360f);
-            thrust += netExhaustThrust;
-            engine.SetThrust(thrust);
+            // exhaust thrust, normalized for 2200HP and 180m/s at 7km = 200lbs thrust
+            netExhaustThrust = exhaustThrust * (float)((pistonengine._power / 2200f / PistonEngine.HP2W) * 0.89 * (0.5 + v / 360) * Math.Max(.05+(1-vessel.staticPressure)*1.6,1.0));
+            float thrustOut = thrust + netExhaustThrust;
+
+            // set minthrust to maxthrust
+            if (vessel.ctrlState.mainThrottle == 0)
+                engine.idle = 0f;
+            else
+                engine.idle = 1.0f;
+            // set thrust to something KSP can accept, handle drag
+            if (thrustOut < 0.001f)
+            {
+                float drag = thrustOut - 0.001f;
+                thrustOut = 0.001f;
+                this.part.rigidbody.AddForceAtPosition(part.transform.up * drag, part.transform.position, ForceMode.Force);
+            }
+            // thrust in kgf divided by kg mdot
+            isp = thrustOut * 1000 / 9.80665f / fuelFlow;
+            engine.SetThrust(thrustOut);
             engine.SetIsp(isp);
 
             //Vector3d v1 = part.FindModelTransform("thrustTransform").forward;
@@ -499,9 +526,10 @@ namespace AJE
         // Iteration method
         // Will calculate engine parameters.
         // Takes ambient pressure, temperature, and the engine revolutions in radians/sec
-        public void calc(float pAmb, float tAmb, float speed)
+        public void calc(float pAmb, float tAmb, float speed, float throttle)
         {
             _running = true; //_magnetos && _fuel && (speed > 60*RPM2RADPS);
+            _throttle = throttle;
 
             // check if we need to switch boost modes
             float power;
@@ -721,8 +749,9 @@ namespace AJE
             rFactor = (rowKey - Data[r - 1, 0]) / (Data[r, 0] - Data[r - 1, 0]);
             cFactor = (colKey - Data[0, c - 1]) / (Data[0, c] - Data[0, c - 1]);
 
-            if (rFactor > 1.0) rFactor = 1.0;
-            else if (rFactor < 0.0) rFactor = 0.0;
+            // allow off-the-end linear interpolation
+            /*if (rFactor > 1.0) rFactor = 1.0;
+            else*/ if (rFactor < 0.0) rFactor = 0.0;
 
             if (cFactor > 1.0) cFactor = 1.0;
             else if (cFactor < 0.0) cFactor = 0.0;
@@ -977,10 +1006,23 @@ namespace AJE
                 SetCpFactor(double.Parse(node.GetValue("cp_factor")));
 
             CalcDefaults();
+            // persistent values
+            if (node.HasValue("RPM"))
+                RPM = double.Parse(node.GetValue("RPM"));
+            if (node.HasValue("Pitch"))
+                Pitch = double.Parse(node.GetValue("Pitch"));
+            if (node.HasValue("Feathered"))
+                Feathered = bool.Parse(node.GetValue("Feathered"));
+            if (node.HasValue("Reversed"))
+                Reversed = bool.Parse(node.GetValue("Reversed"));
         }
         public void Save(ConfigNode node)
         {
-            
+            ConfigNode n = new ConfigNode("PROPELLER");
+            n.AddValue("RPM", RPM);
+            n.AddValue("Pitch", Pitch);
+            n.AddValue("Reversed", Reversed);
+            n.AddValue("Feathered", Feathered);
         }
 
         void CalcDefaults()
@@ -1104,7 +1146,6 @@ namespace AJE
             velocity, air density,  and rotational rate. */
         public double GetPowerRequired(double rho, double Vel)
         {
-            string pos = "start";
             double cPReq, J;
             double RPS = RPM / 60.0;
 
@@ -1115,7 +1156,6 @@ namespace AJE
 
             if (MaxPitch == MinPitch)   // Fixed pitch prop
             {
-                pos = "Fixed pitch";
                 cPReq = cPowerFP.Evaluate((float)J);
             }
             else
@@ -1131,7 +1171,6 @@ namespace AJE
                     {
                         if (!Reversed)
                         {
-                            pos = "CS";
                             double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
                             double dRPM = rpmReq - RPM;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
@@ -1143,7 +1182,6 @@ namespace AJE
                         }
                         else // Reversed propeller
                         {
-                            pos = "CS reversed";
                             // when reversed calculate propeller pitch depending on throttle lever position
                             // (beta range for taxing full reverse for braking)
                             double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
@@ -1161,7 +1199,6 @@ namespace AJE
                     }
                     else  // Feathered propeller
                     {
-                        pos = "Feathered";
                         // ToDo: Make feathered and reverse settings done via FGKinemat
                         Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
                         if (Pitch > MaxPitch)
@@ -1171,7 +1208,6 @@ namespace AJE
                 else // Manual Pitch Mode, pitch is controlled externally
                 {
                 }
-                pos = "CS/Var done";
                 cPReq = cPower.GetValue(J, Pitch);
             }
 
@@ -1179,7 +1215,6 @@ namespace AJE
             cPReq *= CpFactor;
 
             // Apply optional Mach effects from CP_MACH table
-            pos = "CpMach";
             if (CpMach != null)
                 cPReq *= CpMach.Evaluate((float)HelicalTipMach);
 
