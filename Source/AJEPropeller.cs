@@ -95,7 +95,7 @@ namespace AJE
         //[KSPField(isPersistant = false, guiActive = true)]
         public double density = 1.225f;
         //[KSPField(isPersistant = false, guiActive = true)]
-        public double speedOfSound = 290;
+        public double speedOfSound = 343;
         //[KSPField(isPersistant = false, guiActive = true)]
         public double pressure = 101325f;
         //[KSPField(isPersistant = false, guiActive = true)]
@@ -156,6 +156,8 @@ namespace AJE
 
             if (!propJSB.IsSane()) // get prop from prefab if necessary
                 FixProp();
+            CpTweak = (float)propJSB.GetCpFactor();
+            CtTweak = (float)propJSB.GetCtFactor();
         }
 
         void FixProp() // get prop from prefab
