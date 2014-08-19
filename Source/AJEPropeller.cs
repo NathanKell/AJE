@@ -63,19 +63,19 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float ramAir = 0.2f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Manifold Pressure (inHG)")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Manifold Pressure", guiFormat = "0.###", guiUnits = "inHg")]
         public float manifoldPressure = 0.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Fuel Flow (kg/s)")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Fuel Flow", guiFormat = "0.###", guiUnits = "kg/s")]
         public float fuelFlow = 0.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Charge Air Temp")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Charge Air Temp", guiFormat = "0.###", guiUnits = "C")]
         public float chargeAirTemp = 15.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust (kN)")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust", guiFormat = "0.###", guiUnits = "kN")]
         public float netExhaustThrust = 0.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Pitch")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Pitch", guiUnits = "deg.")]
         public float propPitch = 0.0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
@@ -102,8 +102,8 @@ namespace AJE
         public float temperature = 15f;
         //[KSPField(isPersistant = false, guiActive = true)]
         public float v;
-        
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Thrust")]
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Prop Thrust", guiFormat = "0.###", guiUnits = "kN")]
         public float thrust;
         //[KSPField(isPersistant = false, guiActive = true)]
         public float isp;
@@ -228,8 +228,8 @@ namespace AJE
             propPitch = (float)propJSB.GetPitch();
 
 
-            // exhaust thrust, normalized for 2200HP and 180m/s at 7km = 200lbs thrust
-            netExhaustThrust = exhaustThrust * (float)((pistonengine._power / 2200f / PistonEngine.HP2W) * 0.89 * (0.5 + v / 360) * Math.Max(.05+(1-vessel.staticPressure)*1.6,1.0));
+            // exhaust thrust, normalized for 2200HP at 7km = 200lbs thrust
+            netExhaustThrust = exhaustThrust * (float)(pistonengine._power / (1640540 / 0.89) * Math.Min(.05+(1-vessel.staticPressure)*1.6,1.0));
             float thrustOut = thrust + netExhaustThrust;
 
             // set minthrust to maxthrust
