@@ -244,7 +244,7 @@ namespace AJE
             {
                 float drag = thrustOut - 0.001f;
                 thrustOut = 0.001f;
-                this.part.rigidbody.AddForceAtPosition(part.transform.up * drag, part.transform.position, ForceMode.Force);
+                this.part.rigidbody.AddForceAtPosition(engine.thrustTransforms[0].forward * drag, engine.thrustTransforms[0].position, ForceMode.Force);
             }
             // thrust in kgf divided by kg mdot
             isp = thrustOut * 1000 / 9.80665f / fuelFlow;
@@ -698,8 +698,17 @@ namespace AJE
         {
             Debug.Log("*FGTable: Constructing table from node " + node.name);
             nRows = (uint)node.values.Count-1;
-            string[] tmp = node.values[0].value.Split(null);
-            nCols = (uint)tmp.Length;
+            if (nRows > 0)
+            {
+                string[] tmp = node.values[1].value.Split(null);
+                nCols = (uint)tmp.Length - 1;
+            }
+            else
+            {
+                // then no point to having a table...
+                string[] tmp = node.values[0].value.Split(null);
+                nCols = (uint)tmp.Length - 1;
+            }
             
             Data = new double[nRows + 1, nCols + 1];
             for (int i = 0; i <= nRows; i++)

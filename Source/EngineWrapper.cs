@@ -271,6 +271,23 @@ namespace AJE
                 }
             }
         }
+        public List<Transform> thrustTransforms
+        {
+            get
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        return engine.thrustTransforms;
+                    case EngineType.ModuleEngineFX:
+                        return engineFX.thrustTransforms;
+                    case EngineType.FSengine:
+                    //                      return fsengine.thrustTransformName;
+                    default:
+                        return null;
+                }
+            }
+        }
         public bool useEngineResponseTime
         {
             set
