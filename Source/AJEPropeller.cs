@@ -244,7 +244,7 @@ namespace AJE
             {
                 float drag = thrustOut - 0.001f;
                 thrustOut = 0.001f;
-                this.part.rigidbody.AddForceAtPosition(engine.thrustTransforms[0].forward * drag, engine.thrustTransforms[0].position, ForceMode.Force);
+                this.part.rigidbody.AddForceAtPosition(engine.thrustTransforms[0].forward * -drag, engine.thrustTransforms[0].position, ForceMode.Force);
             }
             // thrust in kgf divided by kg mdot
             isp = thrustOut * 1000 / 9.80665f / fuelFlow;
@@ -696,7 +696,6 @@ namespace AJE
         }
         public void Load(ConfigNode node)
         {
-            Debug.Log("*FGTable: Constructing table from node " + node.name);
             nRows = (uint)node.values.Count-1;
             if (nRows > 0)
             {
@@ -714,7 +713,6 @@ namespace AJE
             for (int i = 0; i <= nRows; i++)
             {
                 string[] curRow = node.values[i].value.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                string tmpstr = "Data for row " + i + ": ";
                 for (int j = 0; j < curRow.Length; j++)
                 {
                     double dtmp = -999;
@@ -723,11 +721,8 @@ namespace AJE
                         offset = 1;
                     if (double.TryParse(curRow[j], out dtmp))
                         Data[i, j+offset] = dtmp;
-                    tmpstr += dtmp + ", ";
                 }
-                Debug.Log(tmpstr + "endrow.");
             }
-            Debug.Log("*FGTable: Constructed table of " + nCols + "," + nRows + " (plus key row and col).");
         }
         public void Save(ConfigNode node)
         {
