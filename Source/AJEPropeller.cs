@@ -152,8 +152,8 @@ namespace AJE
             //power *= 745.7f;
 
             //propeller = new AJEPropellerSolver(r0, v0 * 0.5144f, omega0 * PistonEngine.RPM2RADPS, rho0, power0 * PistonEngine.HP2W);
-            pistonengine = new PistonEngine(power * PistonEngine.HP2W, omega * PistonEngine.RPM2RADPS / gearratio, BSFC);
-            pistonengine._hasSuper = (boost0 + turbo > 0);
+            pistonengine = new PistonEngine(power * PistonEngine.HP2W, maxRPM * PistonEngine.RPM2RADPS, BSFC);
+            pistonengine._hasSuper = boost0 > 0;
             if (!pistonengine.setBoostParams(wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt))
                 pistonengine.setTurboParams(turbo, wastegateMP * INHG2PA);
             if (displacement > 0)
@@ -163,14 +163,14 @@ namespace AJE
             pistonengine._coolerMin = coolerMin + 273.15f;
             pistonengine._ramAir = ramAir;
 
-            propJSB = new AJEPropJSB(minRPM * gearratio, maxRPM * gearratio, propName);
+            propJSB = new AJEPropJSB(propName, minRPM * gearratio, maxRPM * gearratio);
 
             if(propJSB.GetConstantSpeed() == 0)
                 Fields["propPitch"].guiActive = false;
 
             pistonengine.ComputeVEMultiplier(); // given newly-set stats
 
-            omega = 100; // start slow
+            omega = 30; // start slow
         }
 
         void FixProp() // get prop from prefab
@@ -185,14 +185,7 @@ namespace AJE
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            // for now don't worry about it...
-            /*if (propJSB == null)
-                propJSB = new AJEPropJSB(node);
-            else
-                propJSB.Load(node);
-
-            if (!propJSB.IsSane()) // get prop from prefab if necessary
-                FixProp();*/
+            // for now don't worry about loading persistent PROPELLER data
         }
         public override void OnSave(ConfigNode node)
         {
@@ -341,6 +334,19 @@ namespace AJE
 
         const float T0 = 288.15f;
         const float P0 = 101325f;
+
+        public void LogVars()
+        {
+            Debug.Log("Dumping engine status");
+            foreach (FieldInfo f in this.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                Debug.Log(f.Name + " = " + f.GetValue(this));
+            }
+            foreach (FieldInfo f in this.GetType().GetFields())
+            {
+                Debug.Log(f.Name + " = " + f.GetValue(this));
+            }
+        }
 
         public PistonEngine(float power, float speed, float BSFC)
         {
@@ -904,23 +910,36 @@ namespace AJE
         const double KGM3TOSLUGFT3 = 0.00194032033;
         const double MTOFT = 1 / FTTOM;
         const double FTLBTOJ = 1.3558179491; // W/HP divided by ft-lb/HP
+
+        public void LogVars()
+        {
+            Debug.Log("Dumping engine status");
+            foreach (FieldInfo f in this.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                Debug.Log(f.Name + " = " + f.GetValue(this));
+            }
+            foreach (FieldInfo f in this.GetType().GetFields())
+            {
+                Debug.Log(f.Name + " = " + f.GetValue(this));
+            }
+        }
         
 
         public AJEPropJSB(ConfigNode node = null)
         {
 
             SetDefaults();
-
+            RPM = 30;
             if (node != null)
                 Load(node);
             CalcDefaults();
         }
-        public AJEPropJSB(double minR, double maxR, string propName)
+        public AJEPropJSB(string propName, double minR = -1, double maxR = -1)
         {
             SetDefaults();
 
 
-            RPM = 0;
+            RPM = 30;
             ConfigNode node = null;
             foreach (ConfigNode n in GameDatabase.Instance.GetConfigNodes("PROPELLER"))
             {
@@ -933,7 +952,13 @@ namespace AJE
             }
             if (node != null)
                 Load(node);
+            if (minR >= 0)
+                MinRPM = minR;
+            if (maxR >= 0)
+                MaxRPM = maxR;
+
             CalcDefaults();
+            Debug.Log("*AJE* Constructed prop of type " + propName + ", RPM " + RPM + ", pitch " + MinPitch + "/" + MaxPitch + ", RPMs " + MinRPM + "/" + MaxRPM + ", Diam " + Diameter + "m, Ixx " + Ixx + "J. CS? " + ConstantSpeed);
         }
         public AJEPropJSB(AJEPropJSB t)
         {
@@ -1092,11 +1117,12 @@ namespace AJE
         {
             if (MinPitch == MaxPitch)
                 ConstantSpeed = 0;
+            else
+                ConstantSpeed = 1;
             vTorque = new Vector3(0f, 0f, 0f);
             D4 = Diameter * Diameter * Diameter * Diameter;
             D5 = D4 * Diameter;
             Pitch = MinPitch;
-            RPM = 0;
         }
 
         /** Checks if the object is sane (because KSP serialization is poor) */
