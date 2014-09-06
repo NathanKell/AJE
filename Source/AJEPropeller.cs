@@ -93,6 +93,9 @@ namespace AJE
         public float mixture = 0.836481f; // optimal "auto rich"
         // ignore RPM for now
 
+		[KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "VolETweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.25f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        public float VolETweak = 1.0f;
+
 //        [KSPField(isPersistant = false, guiActive = true)]
         public float density = 1.225f;
 //        [KSPField(isPersistant = false, guiActive = true)]
@@ -134,6 +137,7 @@ namespace AJE
             engine.idle = idle;
             engine.useVelocityCurve = false;
             engine.ThrustUpperLimit = maxThrust;
+            engine.useEngineResponseTime = false;
    
     //        v0 *= 0.5144f;
     //        omega0 *= 0.1047f;
@@ -175,6 +179,7 @@ namespace AJE
             // for RPM handling - bool throttleCut = (object)vessel != null && vessel.ctrlState.mainThrottle <= 0;
             pistonengine._boost = boost;
             pistonengine._mixture = mixture;
+            pistonengine._volEfficMult = VolETweak;
 
             density = (float)ferram4.FARAeroUtil.GetCurrentDensity(part.vessel.mainBody, (float)part.vessel.altitude);
             v = Vector3.Dot(vessel.srf_velocity,-part.FindModelTransform(engine.thrustVectorTransformName).forward.normalized);
@@ -211,8 +216,8 @@ namespace AJE
             propeller.modPitch(mod);
 
             thrust = propeller._thrustOut / 1000f;
-            // exhaust thrust, normalized for 2200HP and 180m/s = 200lbs thrust
-            netExhaustThrust = exhaustThrust * pistonengine._power / 2200f / 745.7f * 0.89f * (0.5f + v / 360f);
+            // exhaust thrust, normalized for 2200HP at 7km = 200lbs thrust
+            netExhaustThrust = exhaustThrust * (float)(pistonengine._power / (1640540 / 0.89) * Math.Min(.05+(1-vessel.staticPressure)*1.6,1.0));
             thrust += netExhaustThrust;
             engine.SetThrust(thrust);
             isp = propeller._thrustOut / 9.80665f / BSFC / pistonengine._power;
@@ -253,6 +258,7 @@ namespace AJE
         public float _compression;  // compression ratio (>1)
         public float _minthrottle; // minimum throttle [0:1]
         public float _voleffic; // volumetric efficiency
+        public float _volEfficMult; // multiplier to VE, for tweaking.
         public float[] _boostMults;
         public float[] _boostCosts;
         public int _boostMode;
@@ -274,7 +280,7 @@ namespace AJE
         public float _power;
         public float _chargeTemp;
 
-        public const float HP2W = 745.7f;
+        public const float HP2W = 745.699872f;
         public const float CIN2CM = 1.6387064e-5f;
         public const float RPM2RADPS = 0.1047198f;
         public const float RAIR = 287.3f;
@@ -300,7 +306,8 @@ namespace AJE
             _boostSwitch = -1f; // auto
             _coolerEffic = 0f;
             _coolerMin = 0f;
-            _ramAir = 0.2f;
+            _ramAir = 0.1f;
+            _volEfficMult = 1.0f;
 
             _oilTemp = 298f;
             _oilTempTarget = _oilTemp;
@@ -387,7 +394,7 @@ namespace AJE
             //from JSBSim
             // air flow
             float swept_volume = (_displacement * speed / RPM2RADPS / 60f) / 2f;
-            float v_dot_air = swept_volume * GetPressureVE(pAmb, MAP) * _voleffic;
+            float v_dot_air = swept_volume * GetPressureVE(pAmb, MAP) * _voleffic * _volEfficMult;
 
             float rho_air_manifold = MAP / (RAIR * GetCAT(MAP, pAmb, tAmb));
             return v_dot_air * rho_air_manifold;
@@ -480,7 +487,7 @@ namespace AJE
             // We need to adjust the minimum manifold pressure to get a
             // reasonable idle speed (a "closed" throttle doesn't suck a total
             // vacuum in real manifolds).  This is a hack.
-            float _minMP = (-0.008f * _boostMults[boostMode]) + _minthrottle;
+            float _minMP = (-0.004f * _boostMults[boostMode] * _boost) + _minthrottle;
 
             float MAP = pAmb * charge;
 
@@ -554,7 +561,7 @@ namespace AJE
                     MAP = MAP1;
                     _chargeTarget = _charge = target1;
                     power = power1;
-                    _fuelFlow = m_dot_fuel0;
+                    _fuelFlow = m_dot_fuel1;
                 }
             }
 
@@ -581,12 +588,12 @@ namespace AJE
             // away as we approach cruise RPMs (full at 50%, zero at 100%),
             // though, to prevent interaction with the power computations.
             // Ugly.
-            if (speed > 0 && speed < _omega0)
+            /*if (speed > 0 && speed < _omega0)
             {
                 float interp = 2 - 2 * speed / _omega0;
                 interp = (interp > 1) ? 1 : interp;
                 _torque -= 0.08f * (_power0 / _omega0) * interp;
-            }
+            }*/
 
 
             // UNUSED
