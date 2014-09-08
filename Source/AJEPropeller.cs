@@ -26,10 +26,10 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float gearratio;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float turbo = 1f;
+        public bool turbo = false;
         [KSPField(isPersistant = false, guiActive = false)]
         public float BSFC = 7.62e-08f;
-        [KSPField(isPersistant = false)]
+        [KSPField(isPersistant = true)]
         public string propName;
         [KSPField(isPersistant = false, guiActive = true)]
         public string ShaftPower;
@@ -65,6 +65,11 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float ramAir = 0.2f;
 
+        [KSPField(isPersistant = true, guiActive = false)]
+        public float propDiam = -1f;
+        [KSPField(isPersistant = true, guiActive = false)]
+        public float propIxx = -1f;
+
         [KSPField(isPersistant = false, guiActive = true, guiName = "Prop RPM", guiFormat = "0.##")]
         public float omega;
 
@@ -94,14 +99,17 @@ namespace AJE
         public float mixture = 0.836481f; // optimal "auto rich"
         // ignore RPM for now
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
         public float CpTweak = 1.0f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CtTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CtTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
         public float CtTweak = 1.0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "VolETweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.25f, maxValue = 1.5f, stepIncrement = 0.01f)]
         public float VolETweak = 1.0f;
+
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "MachPowTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.5f, stepIncrement = 0.01f)]
+        public float MachPowTweak = 1.0f;
 
         //[KSPField(isPersistant = false, guiActive = true)]
         public double density = 1.225f;
@@ -154,8 +162,7 @@ namespace AJE
             //propeller = new AJEPropellerSolver(r0, v0 * 0.5144f, omega0 * PistonEngine.RPM2RADPS, rho0, power0 * PistonEngine.HP2W);
             pistonengine = new PistonEngine(power * PistonEngine.HP2W, maxRPM * PistonEngine.RPM2RADPS, BSFC);
             pistonengine._hasSuper = boost0 > 0;
-            if (!pistonengine.setBoostParams(wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt))
-                pistonengine.setTurboParams(turbo, wastegateMP * INHG2PA);
+            pistonengine.setBoostParams(wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt, turbo);
             if (displacement > 0)
                 pistonengine._displacement = displacement * PistonEngine.CIN2CM;
             pistonengine._compression = compression;
@@ -163,7 +170,7 @@ namespace AJE
             pistonengine._coolerMin = coolerMin + 273.15f;
             pistonengine._ramAir = ramAir;
 
-            propJSB = new AJEPropJSB(propName, minRPM * gearratio, maxRPM * gearratio);
+            propJSB = new AJEPropJSB(propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
 
             if(propJSB.GetConstantSpeed() == 0)
                 Fields["propPitch"].guiActive = false;
@@ -231,7 +238,7 @@ namespace AJE
 
             propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
             propJSB.SetAdvance(RPM);
-            propJSB.SetTweaks(CtTweak, CpTweak);
+            propJSB.SetTweaks(CtTweak, CpTweak, MachPowTweak);
             thrust = (float)propJSB.Calculate(shaftHP, density, v, speedOfSound);
             omega = (float)propJSB.GetRPM();
             ShaftPower = ((int)Math.Round(shaftHP)).ToString() + "HP";
@@ -480,18 +487,10 @@ namespace AJE
             MonoBehaviour.print("*AJE* Setting volumetric efficiency. At SL with MAP " + MAP + ", power = " + power / HP2W + "HP, BSFC = " + _bsfc + ", mda/f = " + m_dot_air2 + "/" + m_dot_fuel2 + ", VE = " + _voleffic + ". Orig a/f: " + m_dot_air + "/" + m_dot_fuel);
         }
 
-        // legacy support
-        public void setTurboParams(float turbo, float maxMP)
-        {
-            _maxMP = maxMP;
-            _boostMults[0] = turbo;
-            _boostCosts[0] = 0f;
-        }
-
         // set boost parameters:
         // maximum MAP, the two boost pressures to maintain, the two rated altitudes (km),
         // the cost for the second boost mode, and the switch altitude (in km), or -1f for auto
-        public bool setBoostParams(float wastegate, float boost0, float boost1, float rated0, float rated1, float cost1, float switchAlt)
+        public bool setBoostParams(float wastegate, float boost0, float boost1, float rated0, float rated1, float cost1, float switchAlt, bool turbo)
         {
             bool retVal = false;
             if (boost0 > 0)
@@ -515,7 +514,7 @@ namespace AJE
             else
                 _boostSwitch = switchAlt;
             MonoBehaviour.print("*AJE* Setting boost params. MaxMP = " + wastegate + ", boosts = " + _boostMults[0] + "/" + _boostMults[1] + ", switch " + _boostSwitch + " from " + boost0 + "@" + rated0 + ", " + boost1 + "@" + rated1);
-
+            _hasSuper = !turbo && boost0 > 1.0f;
             return retVal;
         }
 
@@ -536,6 +535,30 @@ namespace AJE
             float C = 1.246708471f;
             float rpm_factor = A * Mathf.Pow(B, rpm_norm) * Mathf.Pow(rpm_norm, C);
             return 1f + (_boost * (_boostMults[boostMode] - 1f) * rpm_factor);
+        }
+
+        float GetCharge(float target)
+        {
+            float chg = _charge;
+            if (_hasSuper)
+            {
+                // Superchargers have no lag
+                chg = target;
+            }
+            else //if (!_running)
+            {
+                // Turbochargers only work well when the engine is actually
+                // running.  The 25% number is a guesstimate from Vivian.
+
+                // now clamp near target; this also means clamping going down,
+                // which isn't quite right, but eh.
+                // Also now use when not running -- the point of this is turbo lag!
+                if (chg > 0.95f * target)
+                    chg  = target;
+                else
+                    chg = _charge + (target - _charge) * 0.25f;
+            }
+            return chg;
         }
 
         // return the manifold absolute pressure in pascals
@@ -579,15 +602,7 @@ namespace AJE
                     _boostMode--;
 
                 _chargeTarget = GetChargeTarget(speed, _boostMode);
-                if (_hasSuper)
-                {
-                    // Superchargers have no lag
-                    _charge = _chargeTarget;
-                } //else if(!_running) {
-                // Turbochargers only work well when the engine is actually
-                // running.  The 25% number is a guesstimate from Vivian.
-                //   _chargeTarget = 1 + (_chargeTarget - 1) * 0.25;
-                //  }
+                _charge = GetCharge(_chargeTarget);
 
                 MAP = CalcMAP(pAmb, _boostMode, _charge);
 
@@ -600,8 +615,10 @@ namespace AJE
                 // assume supercharger for now, so charge = target
                 float target0 = GetChargeTarget(speed, 0);
                 float target1 = GetChargeTarget(speed, 1);
-                float MAP0 = CalcMAP(pAmb, 0, target0);
-                float MAP1 = CalcMAP(pAmb, 1, target1);
+                float charge0 = GetCharge(target0);
+                float charge1 = GetCharge(target1);
+                float MAP0 = CalcMAP(pAmb, 0, charge0);
+                float MAP1 = CalcMAP(pAmb, 1, charge1);
 
                 float m_dot_fuel0 = GetAirflow(pAmb, tAmb, speed, MAP0) * fuelRatio;
                 float power0 = m_dot_fuel0 * mixtureEfficiency.Evaluate(fuelRatio) / _bsfc - _boostCosts[0];
@@ -612,14 +629,16 @@ namespace AJE
                 if (power0 >= power1)
                 {
                     MAP = MAP0;
-                    _chargeTarget = _charge = target0;
+                    _chargeTarget = target0;
+                    _charge = charge0;
                     power = power0;
                     _fuelFlow = m_dot_fuel0;
                 }
                 else
                 {
                     MAP = MAP1;
-                    _chargeTarget = _charge = target1;
+                    _chargeTarget = target1;
+                    _charge = charge1;
                     power = power1;
                     _fuelFlow = m_dot_fuel1;
                 }
@@ -896,6 +915,7 @@ namespace AJE
         double CpFactor;
         double CtTweak;
         double CpTweak;
+        double MachPowTweak;
         int ConstantSpeed;
         double ReversePitch; // Pitch, when fully reversed
         bool Reversed;     // true, when propeller is reversed
@@ -934,7 +954,7 @@ namespace AJE
                 Load(node);
             CalcDefaults();
         }
-        public AJEPropJSB(string propName, double minR = -1, double maxR = -1)
+        public AJEPropJSB(string propName, double minR = -1, double maxR = -1, double diam = -1, double ixx = -1)
         {
             SetDefaults();
 
@@ -956,6 +976,10 @@ namespace AJE
                 MinRPM = minR;
             if (maxR >= 0)
                 MaxRPM = maxR;
+            if (diam >= 0)
+                Diameter = diam;
+            if (ixx >= 0)
+                Ixx = ixx;
 
             CalcDefaults();
             Debug.Log("*AJE* Constructed prop of type " + propName + ", RPM " + RPM + ", pitch " + MinPitch + "/" + MaxPitch + ", RPMs " + MinRPM + "/" + MaxRPM + ", Diam " + Diameter + "m, Ixx " + Ixx + "J. CS? " + ConstantSpeed);
@@ -1103,7 +1127,7 @@ namespace AJE
             Feathered = false;
             Reverse_coef = 0.0;
             GearRatio = 1.0;
-            CtFactor = CpFactor = CpTweak = CtTweak= 1.0;
+            CtFactor = CpFactor = CpTweak = CtTweak = MachPowTweak = 1.0;
             ConstantSpeed = 1; // assume constant speed unless told otherwise
             cThrust = null;
             cThrustFP = null;
@@ -1134,10 +1158,11 @@ namespace AJE
         }
 
         // Set tweak values
-        public void SetTweaks(double newCtTweak, double newCpTweak)
+        public void SetTweaks(double newCtTweak, double newCpTweak, double newMachTweak)
         {
             CtTweak = newCtTweak;
             CpTweak = newCpTweak;
+            MachPowTweak = newMachTweak;
         }
 
         /** Sets the Revolutions Per Minute for the propeller. Normally the propeller
@@ -1315,7 +1340,7 @@ namespace AJE
 
             // Apply optional Mach effects from CP_MACH table
             if (CpMach != null)
-                cPReq *= CpMach.Evaluate((float)HelicalTipMach);
+                cPReq *= Math.Pow(CpMach.Evaluate((float)HelicalTipMach), MachPowTweak);
 
             double local_RPS = RPS < 0.01 ? 0.01 : RPS;
 
@@ -1366,7 +1391,7 @@ namespace AJE
 
             // Apply optional Mach effects from CT_MACH table
             if (CtMach != null)
-                ThrustCoeff *= CtMach.Evaluate((float)HelicalTipMach);
+                ThrustCoeff *= Math.Pow(CtMach.Evaluate((float)HelicalTipMach), MachPowTweak);
 
             Thrust = ThrustCoeff*RPS*RPS*D4*rho;
 
