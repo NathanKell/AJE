@@ -573,13 +573,16 @@ namespace AJE
 
             float MAP = pAmb * charge;
 
-            // Scale to throttle setting, clamp to wastegate
-            if (_running)
-                MAP *= _minMP + (1 - _minMP) * _throttle;
 
             // Scale the max MP according to the WASTEGATE control input.  Use
             // the un-supercharged MP as the bottom limit.
-            return (float)Math.Min(MAP, Math.Max(_wastegate * _maxMP, pAmb));
+            MAP = (float)Math.Min(MAP, Math.Max(_wastegate * _maxMP, pAmb));
+            
+            // Scale to throttle setting
+            //if (_running)
+                MAP *= _minMP + (1 - _minMP) * _throttle;
+
+            return MAP;
         }
 
         // Iteration method
