@@ -96,8 +96,7 @@ namespace AJE
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "RPM Lever", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float RPM = 1.0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
-        public float mixture = 0.836481f; // optimal "auto rich"
-        // ignore RPM for now
+        public float mixture = 0.7f; // optimal "auto rich"
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
         public float CpTweak = 1.0f;
@@ -426,7 +425,7 @@ namespace AJE
         // mix = range [0, 1]
         public float FuelAirRatio(float mix)
         {
-            return 1f / (8.05f + 11.2f * (1f - mix)); // prevent an AFR too high or low
+            return 0.052f + 0.07028571f * mix; // prevent an AFR too high or low
         }
 
         // return the relative volumetric efficiency of the engine, given its compression ratio
