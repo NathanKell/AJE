@@ -10,6 +10,8 @@ namespace AJE
     public class AJEPropeller : PartModule
     {
 
+        [KSPField(isPersistant = true)]
+        public float HeatConst = 15f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public float IspMultiplier = 1f;
@@ -31,10 +33,8 @@ namespace AJE
         public float BSFC = 7.62e-08f;
         [KSPField(isPersistant = true)]
         public string propName;
-        [KSPField(isPersistant = false, guiActive = true)]
-        public string ShaftPower;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float SpeedBuff = 1.0f;
+        
+        
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxThrust = 99999;
 
@@ -58,6 +58,8 @@ namespace AJE
         public float switchAlt = 180f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float exhaustThrust = 0f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float meredithEffect = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float coolerEffic = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
@@ -90,6 +92,12 @@ namespace AJE
 
         [KSPField(isPersistant = false, guiActive = true, guiName = "Exhaust Thrust", guiFormat = "0.###", guiUnits = "kN")]
         public float netExhaustThrust = 0.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Meredith Effect", guiFormat = "0.###", guiUnits = "kN")]
+        public float netMeredithEffect = 0.0f;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Brake Horsepower", guiFormat = "0", guiUnits = "HP")]
+        public float ShaftPower;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float boost = 1.0f;
@@ -125,6 +133,8 @@ namespace AJE
         public float isp;
 
         public const float INHG2PA = 101325.0f / 760f * 1000f * 0.0254f; // 1 inch of Mercury in Pascals
+        public const float LBFTOKN = 0.00444822162f; // 1 pound-force in kiloNewtons
+        public const float CTOK = 273.15f;
 
 
         //[KSPField(isPersistant = false, guiActive = true)]
@@ -166,13 +176,17 @@ namespace AJE
                 pistonengine._displacement = displacement * PistonEngine.CIN2CM;
             pistonengine._compression = compression;
             pistonengine._coolerEffic = coolerEffic;
-            pistonengine._coolerMin = coolerMin + 273.15f;
+            pistonengine._coolerMin = coolerMin + CTOK;
             pistonengine._ramAir = ramAir;
 
             propJSB = new AJEPropJSB(propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
 
             if(propJSB.GetConstantSpeed() == 0)
                 Fields["propPitch"].guiActive = false;
+            if (exhaustThrust <= 0f)
+                Fields["netExhaustThrust"].guiActive = false;
+            if (meredithEffect <= 0f)
+                Fields["netMeredithEffect"].guiActive = false;
 
             pistonengine.ComputeVEMultiplier(); // given newly-set stats
 
@@ -224,10 +238,11 @@ namespace AJE
 
             density = ferram4.FARAeroUtil.GetCurrentDensity(part.vessel, out speedOfSound);
             v = Vector3.Dot(vessel.srf_velocity, -part.FindModelTransform(engine.thrustVectorTransformName).forward.normalized);
-            pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f + 0.5f * density * v * v * ramAir; // include dynamic pressure
-            temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
+            pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f; // include dynamic pressure
+            float dynPressure = 0.5f * (float)density * v * v;
+            temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + CTOK;
 
-            pistonengine.calc((float)pressure, temperature, omega * PistonEngine.RPM2RADPS / gearratio, vessel.ctrlState.mainThrottle);
+            pistonengine.calc((float)pressure + dynPressure * ramAir, temperature, omega * PistonEngine.RPM2RADPS / gearratio, vessel.ctrlState.mainThrottle);
             if (!useOxygen)
             {
                 pistonengine._power = power * PistonEngine.HP2W * vessel.ctrlState.mainThrottle;
@@ -240,24 +255,29 @@ namespace AJE
             propJSB.SetTweaks(CtTweak, CpTweak, MachPowTweak);
             thrust = (float)propJSB.Calculate(shaftHP, density, v, speedOfSound);
             omega = (float)propJSB.GetRPM();
-            ShaftPower = ((int)Math.Round(shaftHP)).ToString() + "HP";
+            ShaftPower = (float)shaftHP;
             manifoldPressure = pistonengine._mp / INHG2PA;
             fuelFlow = pistonengine._fuelFlow;
-            chargeAirTemp = pistonengine._chargeTemp - 273.15f;
+            chargeAirTemp = pistonengine._chargeTemp - CTOK;
             propPitch = (float)propJSB.GetPitch();
 
-            // heat from mixture, heat hack for over-RPM
-            // no idea if the mixture bit (or the overRPM bit) is correct, need to port JSBSim's EGT modeling I guess?
-            float tmpRatio = omega / maxRPM * gearratio;
-            engine.heatProduction = 12f * tmpRatio * tmpRatio * (1.8f - mixture);
-
+            // heat from mixture, heat hack for over-RPM, multiply by relative manifold pressure
+            float tmpRatio = omega / (maxRPM * gearratio);
+            if (tmpRatio > 1)
+                tmpRatio *= tmpRatio;
+            float tempDelta = tmpRatio * (1.7f - mixture) * manifoldPressure / wastegateMP;
+            engine.heatProduction = tempDelta * (2f - (float)Math.Max(1, 0.1*dynPressure / ShaftPower)) * HeatConst; // ram air cooling
             // engine overspeed correction (internal friction at high RPM)
             if (tmpRatio > 1.1)
-                omega -= (tmpRatio * tmpRatio * tmpRatio * tmpRatio) * maxRPM * gearratio * 0.02f;
+                omega -= (tmpRatio * tmpRatio * tmpRatio) * maxRPM * gearratio * 0.02f;
 
-            // exhaust thrust, normalized for 2200HP at 7km = 200lbs thrust
-            netExhaustThrust = exhaustThrust * (float)(pistonengine._power / (1640540 / 0.89) * Math.Min(.05+(1-vessel.staticPressure)*1.6,1.0));
-            float thrustOut = thrust + netExhaustThrust;
+            // exhaust thrust, normalized to "10% HP in lbf"
+            netExhaustThrust = exhaustThrust * ((pistonengine._power + pistonengine._boostCosts[pistonengine._boostMode]) / PistonEngine.HP2W * 0.1f * LBFTOKN) * tempDelta;
+
+            // Meredith Effect radiator thrust, scaled by Q and by how hot the engine is running and the ambient temperature
+            // scaled from N to kN
+            netMeredithEffect = meredithEffect * dynPressure * tempDelta * CTOK / temperature * 0.001f;
+            float thrustOut = thrust + netExhaustThrust + netMeredithEffect;
 
             // set minthrust to maxthrust
             if (vessel.ctrlState.mainThrottle == 0)
@@ -635,6 +655,7 @@ namespace AJE
                     _charge = charge0;
                     power = power0;
                     _fuelFlow = m_dot_fuel0;
+                    _boostMode = 0;
                 }
                 else
                 {
@@ -643,6 +664,7 @@ namespace AJE
                     _charge = charge1;
                     power = power1;
                     _fuelFlow = m_dot_fuel1;
+                    _boostMode = 1;
                 }
             }
 
