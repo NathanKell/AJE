@@ -10,8 +10,8 @@ namespace AJE
     public class AJEPropeller : PartModule
     {
 
-        [KSPField(isPersistant = true)]
-        public float HeatConst = 15f;
+        [KSPField(isPersistant = true, guiActive = true, guiName = "Heat Mult"), UI_FloatRange(minValue = 50f, maxValue = 250f, stepIncrement = 0.5f)]
+        public float HeatConst = 120f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public float IspMultiplier = 1f;
@@ -59,7 +59,7 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float exhaustThrust = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float meredithEffect = 0f;
+        public float meredithEffect = 0.015f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float coolerEffic = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
@@ -249,6 +249,7 @@ namespace AJE
                 //pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
             }
             double shaftHP = pistonengine._power / PistonEngine.HP2W;
+            float totalHP = pistonengine._totalPower / PistonEngine.HP2W;
 
             propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
             propJSB.SetAdvance(RPM);
@@ -266,13 +267,13 @@ namespace AJE
             if (tmpRatio > 1)
                 tmpRatio *= tmpRatio;
             float tempDelta = tmpRatio * (1.7f - mixture) * manifoldPressure / wastegateMP;
-            engine.heatProduction = tempDelta * (2f - (float)Math.Max(1, 0.1*dynPressure / ShaftPower)) * HeatConst; // ram air cooling
+            engine.heatProduction = tempDelta * (5f - (float)Math.Max(4.5, 0.1 * dynPressure / totalHP)) * HeatConst; // ram air cooling
             // engine overspeed correction (internal friction at high RPM)
             if (tmpRatio > 1.1)
                 omega -= (tmpRatio * tmpRatio * tmpRatio) * maxRPM * gearratio * 0.02f;
 
             // exhaust thrust, normalized to "10% HP in lbf"
-            netExhaustThrust = exhaustThrust * ((pistonengine._power + pistonengine._boostCosts[pistonengine._boostMode]) / PistonEngine.HP2W * 0.1f * LBFTOKN) * tempDelta;
+            netExhaustThrust = exhaustThrust * (totalHP * 0.1f * LBFTOKN) * tempDelta;
 
             // Meredith Effect radiator thrust, scaled by Q and by how hot the engine is running and the ambient temperature
             // scaled from N to kN
@@ -351,6 +352,7 @@ namespace AJE
         public float _dOilTempdt;
         public float _power;
         public float _chargeTemp;
+        public float _totalPower;
 
         public const float HP2W = 745.699872f;
         public const float CIN2CM = 1.6387064e-5f;
@@ -420,21 +422,26 @@ namespace AJE
 
             mixtureEfficiency = new FloatCurve();
             ConfigNode node = new ConfigNode("MixtureEfficiency");
-            node.AddValue("key", "0.05	0.0");
-            node.AddValue("key", "0.05137	0.00862");
-            node.AddValue("key", "0.05179	0.21552");
-            node.AddValue("key", "0.0543	0.48276");
-            node.AddValue("key", "0.05842	0.7069");
-            node.AddValue("key", "0.06312	0.83621");
-            node.AddValue("key", "0.06942	0.93103");
-            node.AddValue("key", "0.07786	1.0");
-            node.AddValue("key", "0.08845	1.0");
-            node.AddValue("key", "0.0927	0.98276");
-            node.AddValue("key", "0.1012	0.93103");
-            node.AddValue("key", "0.11455	0.72414");
-            node.AddValue("key", "0.12158	0.4569");
-            node.AddValue("key", "0.12435	0.23276");
-            node.AddValue("key", "0.125 0.0");
+            node.AddValue("key", "0.05 0 0 2.09732360097324");
+            node.AddValue("key", "0.05137 0.00862 2.09732360097324 164.206349206348");
+            node.AddValue("key", "0.05179 0.21552 164.206349206348 35.4900398406375");
+            node.AddValue("key", "0.0543 0.48276 35.4900398406375 18.1343042071197");
+            node.AddValue("key", "0.05842 0.7069 18.1343042071197 9.17092198581561");
+            node.AddValue("key", "0.06312 0.83621 9.17092198581561 5.01693121693122");
+            node.AddValue("key", "0.06942 0.93103 5.01693121693122 2.7239336492891");
+            node.AddValue("key", "0.07786 1 2.7239336492891 0");
+            node.AddValue("key", "0.08845 1 0 -1.3521568627451");
+            node.AddValue("key", "0.0927 0.98276 -1.3521568627451 -2.02862745098038");
+            node.AddValue("key", "0.09695 0.956895 -2.02862745098038 -2.02862745098041");
+            node.AddValue("key", "0.099075 0.9439625 -2.02862745098041 -2.02862745098041");
+            node.AddValue("key", "0.1001375 0.93749625 -2.02862745098041 -2.02862745098038");
+            node.AddValue("key", "0.1012 0.93103 -2.02862745098038 -5.16579275905118");
+            node.AddValue("key", "0.1045375 0.8793075 -5.16579275905118 -5.1657927590512");
+            node.AddValue("key", "0.107875 0.827585 -5.1657927590512 -5.16579275905119");
+            node.AddValue("key", "0.11455 0.72414 -5.16579275905119 -12.6714082503556");
+            node.AddValue("key", "0.12158 0.4569 -12.6714082503556 -26.9723225030083");
+            node.AddValue("key", "0.12435 0.23276 -26.9723225030083 -119.364102564103");
+            node.AddValue("key", "0.125 0 -119.364102564103 0");
             mixtureEfficiency.Load(node);
 
 
@@ -494,14 +501,14 @@ namespace AJE
             // The idea: since HP will be proportional to fuel flow (* mixture efficiency)
             // we compute the multiplier to airflow needed to yield the desired HP.
             // Assume boost0 at takeoff, up to max MP. We use optimal mixture for power.
-            float fuelAirRatio = FuelAirRatio(0.836481f);
+            float fuelAirRatio = FuelAirRatio(0.7f);
             float MAP = Math.Min(_maxMP, P0 * _boostMults[0]);
             float m_dot_air = GetAirflow(P0, T0, _omega0, MAP);
             float m_dot_fuel = fuelAirRatio * m_dot_air;
             float power = m_dot_fuel * mixtureEfficiency.Evaluate(fuelAirRatio) / _bsfc;
             _voleffic = _power0 / power;
             float m_dot_air2 = GetAirflow(P0, T0, _omega0, MAP);
-            float m_dot_fuel2 = fuelAirRatio * m_dot_air;
+            float m_dot_fuel2 = fuelAirRatio * m_dot_air2;
             power = m_dot_fuel2 * mixtureEfficiency.Evaluate(fuelAirRatio) / _bsfc;
             MonoBehaviour.print("*AJE* Setting volumetric efficiency. At SL with MAP " + MAP + ", power = " + power / HP2W + "HP, BSFC = " + _bsfc + ", mda/f = " + m_dot_air2 + "/" + m_dot_fuel2 + ", VE = " + _voleffic + ". Orig a/f: " + m_dot_air + "/" + m_dot_fuel);
         }
@@ -675,6 +682,7 @@ namespace AJE
             _boostPressure = _mp - pAmb;
 
             _power = power;
+            _totalPower = _power + _boostCosts[_boostMode];
             _torque = power / speed;
 
             // Figure that the starter motor produces 15% of the engine's
