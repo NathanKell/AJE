@@ -11,7 +11,7 @@ namespace AJE
     {
 
         [KSPField(isPersistant = true, guiActive = true, guiName = "Heat Mult"), UI_FloatRange(minValue = 50f, maxValue = 250f, stepIncrement = 0.5f)]
-        public float HeatConst = 120f;
+        public float HeatConst = 80f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public float IspMultiplier = 1f;
@@ -59,7 +59,7 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float exhaustThrust = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float meredithEffect = 0.015f;
+        public float meredithEffect = 0.0f;
         [KSPField(isPersistant = false, guiActive = false)]
         public float coolerEffic = 0f;
         [KSPField(isPersistant = false, guiActive = false)]
@@ -106,11 +106,11 @@ namespace AJE
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
         public float mixture = 0.7f; // optimal "auto rich"
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
-        public float CpTweak = 1.0f;
-
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CtTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
         public float CtTweak = 1.0f;
+
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "CpTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.01f)]
+        public float CpTweak = 1.0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "VolETweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.25f, maxValue = 1.5f, stepIncrement = 0.01f)]
         public float VolETweak = 1.0f;
@@ -266,8 +266,11 @@ namespace AJE
             float tmpRatio = omega / (maxRPM * gearratio);
             if (tmpRatio > 1)
                 tmpRatio *= tmpRatio;
-            float tempDelta = tmpRatio * (1.7f - mixture) * manifoldPressure / wastegateMP;
-            engine.heatProduction = tempDelta * (5f - (float)Math.Max(4.5, 0.1 * dynPressure / totalHP)) * HeatConst; // ram air cooling
+            float mixRatio = (1.5f - mixture);
+            mixRatio *= mixRatio;
+            mixRatio = (mixRatio + 0.2f) * 1.2f;
+            float tempDelta = tmpRatio * mixRatio * manifoldPressure / wastegateMP;
+            engine.heatProduction = tempDelta * (1.5f - (float)Math.Max(1.2, 0.1 * dynPressure / totalHP)) * HeatConst; // ram air cooling
             // engine overspeed correction (internal friction at high RPM)
             if (tmpRatio > 1.1)
                 omega -= (tmpRatio * tmpRatio * tmpRatio) * maxRPM * gearratio * 0.02f;
