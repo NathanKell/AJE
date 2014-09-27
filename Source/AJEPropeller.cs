@@ -10,8 +10,8 @@ namespace AJE
     public class AJEPropeller : PartModule
     {
 
-        [KSPField(isPersistant = true, guiActive = true, guiName = "Heat Mult"), UI_FloatRange(minValue = 50f, maxValue = 250f, stepIncrement = 0.5f)]
-        public float HeatConst = 80f;
+        [KSPField(isPersistant = true, guiActive = true, guiName = "Heat Mult"), UI_FloatRange(minValue = 20f, maxValue = 150f, stepIncrement = 0.5f)]
+        public float HeatConst = 50f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public float IspMultiplier = 1f;
@@ -160,7 +160,7 @@ namespace AJE
             engine.ThrustUpperLimit = maxThrust;
             engine.useEngineResponseTime = false;
 
-            part.maxTemp = 120f;
+            part.maxTemp = 200f;
             engine.heatProduction = 10f;
             //v0 *= 0.5144f;
             //omega0 *= 0.1047f;
