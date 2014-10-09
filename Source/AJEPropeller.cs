@@ -946,6 +946,7 @@ namespace AJE
         FloatCurve cThrustFP;
         FloatCurve CtMach;
         FloatCurve CpMach;
+        FloatCurve MachDrag;
         double CtFactor;
         double CpFactor;
         double CtTweak;
@@ -1054,6 +1055,7 @@ namespace AJE
 
             CtMach = t.CtMach;
             CpMach = t.CpMach;
+            MachDrag = t.MachDrag;
             CtFactor = t.CtFactor;
             CpFactor = t.CpFactor;
             ConstantSpeed = t.ConstantSpeed;
@@ -1123,6 +1125,11 @@ namespace AJE
                 CpMach = new FloatCurve();
                 CpMach.Load(node.GetNode("CpMach"));
             }
+            if (node.HasNode("MachDrag"))
+            {
+                MachDrag = new FloatCurve();
+                MachDrag.Load(node.GetNode("MachDrag"));
+            }
 
             if (node.HasValue("sense"))
                 Sense = double.Parse(node.GetValue("sense"));
@@ -1170,6 +1177,7 @@ namespace AJE
             cPowerFP = null;
             CtMach = null;
             CpMach = null;
+            MachDrag = null;
             Vinduced = 0.0;
         }
         void CalcDefaults()
@@ -1274,6 +1282,8 @@ namespace AJE
         public FloatCurve GetCtMachTable() { return CtMach; }
         /// Retrieves propeller power Mach effects factor
         public FloatCurve GetCpMachTable() { return CpMach; }
+
+        public FloatCurve GetMachDragTable() { return MachDrag; }
 
         /// Retrieves the Torque in foot-pounds (Don't you love the English system?)
         public double GetTorque() { return vTorque.x; }
@@ -1403,11 +1413,11 @@ namespace AJE
 
             double omega, PowerAvailable;
             double RPS = RPM/60.0;
-
+            double machInv = 1 / speedOfSound;
             // Calculate helical tip Mach
             double Area = 0.25*Diameter*Diameter*Math.PI;
             double Vtip = RPS * Diameter * Math.PI;
-            HelicalTipMach = Math.Sqrt(Vtip * Vtip + Vel * Vel) / speedOfSound;
+            HelicalTipMach = Math.Sqrt(Vtip * Vtip + Vel * Vel) * machInv;
 
             PowerAvailable = EnginePower - GetPowerRequired(rho, Vel);
 
@@ -1491,7 +1501,12 @@ namespace AJE
             // Transform Torque and momentum first, as PQR is used in this
             // equation and cannot be transformed itself.
             //vMn = in.PQR*(Transform()*vH) + Transform()*vTorque;
-
+            if(MachDrag != null)
+            {
+                double machDrag = MachDrag.Evaluate((float)(Vel * machInv));
+                machDrag *= machDrag * D4 * RPS * RPS * rho * 0.00004;
+                Thrust -= machDrag;
+            }
             return Thrust * 0.001; // return thrust in kilonewtons
         }
     }
