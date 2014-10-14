@@ -82,6 +82,9 @@ namespace AJE
         public float ABmax, ABmin;
 
         [KSPField(isPersistant = false, guiActive = true)]
+        public String Environment;
+
+        [KSPField(isPersistant = false, guiActive = true)]
         public String Mode;
         [KSPField(isPersistant = false, guiActive = true)]
         public String Inlet;
@@ -268,6 +271,9 @@ namespace AJE
 
             aje.FARps0 = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody);
             aje.FARts0 = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
+
+            Environment = (((int)(aje.FARps0 * 100f)) / 100f).ToString() + "atm;" + (((int)(aje.FARts0 * 100f)) / 100f) + "K";
+
             if (usePrat3Curve)
             {
                 aje.prat[3] = aje.p3p2d = (double)(prat3Curve.Evaluate((float)aje.fsmach));
@@ -336,7 +342,5 @@ namespace AJE
     }
 
 
-
-
-
 }
+

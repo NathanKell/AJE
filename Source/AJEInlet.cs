@@ -53,10 +53,21 @@ namespace AJE
             }
             if (part.Modules.Contains("ModuleResourceIntake"))
             {
-                if (vessel.srfSpeed > 10 && intake.intakeEnabled)
-                    cosine = Mathf.Max(0f, Vector3.Dot(vessel.srf_velocity.normalized, part.FindModelTransform(intake.intakeTransformName).forward.normalized));
-                else
+                if (!intake.intakeEnabled) //by Virindi
+                {
                     cosine = 1f;
+                }
+                else
+                {
+
+                    float realcos = Mathf.Max(0f, Vector3.Dot(vessel.srf_velocity.normalized, part.FindModelTransform(intake.intakeTransformName).forward.normalized));
+
+                    float fakecos = (float)(-0.000123d * vessel.srfSpeed * vessel.srfSpeed + 0.002469d * vessel.srfSpeed + 0.987654d);
+                    if (fakecos > 1f)
+                        fakecos = 1f;
+
+                    cosine = Mathf.Max(realcos, fakecos); //by Virindi
+                }
             }
         }
 
