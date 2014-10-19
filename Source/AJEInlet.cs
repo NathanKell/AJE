@@ -18,6 +18,17 @@ namespace AJE
         public float cosine = 1f;
         public ModuleResourceIntake intake;
 
+        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "MachPowTweak", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 2.0f, stepIncrement = 0.04f)]
+        public float dragTweak = 0.32f;
+
+        public PartModule FARModule;
+
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+            FARModule = part.Modules["FARBasicDragModel"];
+        }
+
         public float GetTPR(float Mach)
         {
             if (useTPRCurve)
@@ -43,10 +54,18 @@ namespace AJE
             intake=(ModuleResourceIntake)part.Modules["ModuleResourceIntake"];
         }
 
-        public void FixedUpdate()
+        public void Update()
         {
             if (HighLogic.LoadedSceneIsEditor)
+                if ((object)FARModule != null)
+                    ((ferram4.FARBasicDragModel)FARModule).S = 1.5 * Area * .3048 * .3048 * dragTweak;
+        }
+        public void FixedUpdate()
+        {
+            if (!HighLogic.LoadedSceneIsEditor)
                 return;
+            if ((object)FARModule != null)
+                ((ferram4.FARBasicDragModel)FARModule).S = 1.5 * Area * .3048 * .3048 * dragTweak;
             if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.maxAtmosphereAltitude)
             {
                 return;

@@ -474,18 +474,10 @@ namespace AJE
 
 
 
-            if (inptype == 0 || inptype == 2)
-            {           /*						 input speed  */
-                u0 = u0d / MPH2KPH * 5280f / 3600f;           /*								 airspeed ft/sec */
-                fsmach = u0 / a0;
-                q0 = gamma / 2.0 * fsmach * fsmach * ps0;
-            }
-            if (inptype == 1 || inptype == 3)
-            {            /*						 input mach */
-                u0 = fsmach * a0;
-                u0d = u0 * MPH2KPH / 5280f * 3600f;      /*								 airspeed ft/sec */
-                q0 = gamma / 2.0 * fsmach * fsmach * ps0;
-            }
+            u0 = u0d / MPH2KPH * 5280f / 3600f;           /*								 airspeed ft/sec */
+            fsmach = u0 / a0;
+            q0 = gamma / 2.0 * fsmach * fsmach * ps0;
+
             if (u0 > .0001) rho0 = q0 / (u0 * u0);
             else rho0 = 1.0;
 
